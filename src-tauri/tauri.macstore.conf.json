@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "targets": ["dmg", "app"],
+    "publisher": "Aaron Caceres",
+    "copyright": "Copyright © 2025 Aaron Caceres",
+    "category": "Productivity",
+    "macOS": {
+      "entitlements": "entitlements.mac.plist",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "frameworks": []
+    }
+  }
+}
