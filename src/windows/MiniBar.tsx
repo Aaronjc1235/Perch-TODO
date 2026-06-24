@@ -118,7 +118,9 @@ async function applyPlacement(level: 1 | 2, dock: Dock) {
  */
 export default function MiniBar() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [pinned, setPinned] = useState(true);
+  // Not pinned by default: the minimized widget shouldn't overlay other
+  // windows unless the user explicitly turns the pin on.
+  const [pinned, setPinned] = useState(false);
   const [level, setLevel] = useState<1 | 2>(1);
   const [edge, setEdge] = useState<Edge>(DEFAULT_DOCK.edge);
   const dockRef = useRef<Dock>(DEFAULT_DOCK);

@@ -16,18 +16,19 @@ pub fn show_main(app: &AppHandle) {
     }
 }
 
-/// Open (or show) the small always-on-top widget. Once created, its size and
-/// position are entirely owned by the frontend (snap-to-edge + persisted dock
-/// in `settings`), so re-showing it must NOT reset its position — only the
-/// very first creation gets a default placement before that logic runs.
+/// Open (or show) the small minimized widget. Once created, its size,
+/// position (snap-to-edge + persisted dock in `settings`) and always-on-top
+/// state are entirely owned by the frontend's pin toggle — re-showing it
+/// must NOT reset either, so this only shows the existing window as-is.
 pub fn open_mini(app: &AppHandle) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("mini") {
         let _ = win.show();
-        let _ = win.set_always_on_top(true);
         let _ = win.emit("mini-refresh", ());
         return Ok(());
     }
 
+    // Starts NOT pinned (not always-on-top): per spec, the minimized widget
+    // should only overlay other windows once the user explicitly pins it.
     let win = WebviewWindowBuilder::new(app, "mini", WebviewUrl::App("index.html".into()))
         .title("TODO")
         .inner_size(320.0, 54.0)
@@ -35,7 +36,7 @@ pub fn open_mini(app: &AppHandle) -> Result<(), String> {
         .transparent(true)
         .shadow(false)
         .skip_taskbar(true)
-        .always_on_top(true)
+        .always_on_top(false)
         .resizable(false)
         .build()
         .map_err(|e| format!("build mini window: {e}"))?;
