@@ -16,12 +16,14 @@ pub fn show_main(app: &AppHandle) {
     }
 }
 
-/// Open (or show) the small always-on-top widget in the bottom-right corner.
+/// Open (or show) the small always-on-top widget. Once created, its size and
+/// position are entirely owned by the frontend (snap-to-edge + persisted dock
+/// in `settings`), so re-showing it must NOT reset its position — only the
+/// very first creation gets a default placement before that logic runs.
 pub fn open_mini(app: &AppHandle) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("mini") {
         let _ = win.show();
         let _ = win.set_always_on_top(true);
-        let _ = win.move_window(Position::BottomRight);
         let _ = win.emit("mini-refresh", ());
         return Ok(());
     }

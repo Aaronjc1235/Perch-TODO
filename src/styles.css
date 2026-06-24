@@ -423,14 +423,24 @@ textarea.notes-input {
    antigua píldora gigante "Sin tareas". Soporta fijar (always-on-top).
    ===================================================================== */
 .minibar {
-  display: flex; align-items: center; gap: 12px;
-  width: 320px; height: 54px; padding: 0 8px 0 15px;
+  display: flex; align-items: center; gap: 10px;
+  width: 320px; height: 54px; padding: 0 8px 0 6px;
   background: var(--bg-soft);
   border: 1px solid var(--border-strong);
   border-radius: 14px;
   box-shadow: 0 16px 34px -12px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .04);
   color: var(--text);
 }
+
+/* manija de arrastre: única zona que inicia el movimiento de la ventana,
+   separada de los botones para que arrastrar y hacer click no se mezclen */
+.minibar-grip {
+  width: 18px; height: 38px; flex: none; border-radius: 8px;
+  display: grid; place-items: center; color: var(--text-dim);
+  cursor: grab; transition: background .12s, color .12s;
+}
+.minibar-grip:hover { background: var(--bg-elev); color: var(--text); }
+.minibar-grip:active { cursor: grabbing; }
 @media (prefers-color-scheme: light) {
   .minibar { box-shadow: 0 14px 30px -12px rgba(52, 59, 88, .3), inset 0 1px 0 rgba(255, 255, 255, .5); }
 }
@@ -505,3 +515,41 @@ textarea.notes-input {
   font-weight: 600; font-size: 11px; color: var(--accent);
 }
 .section-sep .clear-link:hover { text-decoration: underline; }
+
+/* =====================================================================
+   PESTAÑA MINIMIZADA (.minitab) — Nivel 2, más discreto que .minibar.
+   Ventana frameless ~60×60 acoplada a un borde de pantalla. Clic en el
+   cuerpo restaura la barra (.minibar); la manija solo arrastra/reubica.
+   ===================================================================== */
+.minitab {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 60px; height: 60px; padding: 4px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: 0 16px 34px -12px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .04);
+  color: var(--text);
+}
+@media (prefers-color-scheme: light) {
+  .minitab { box-shadow: 0 14px 30px -12px rgba(52, 59, 88, .3), inset 0 1px 0 rgba(255, 255, 255, .5); }
+}
+
+.minitab-grip {
+  width: 100%; height: 10px; border-radius: 6px;
+  display: grid; place-items: center; color: var(--text-dim);
+  cursor: grab; transition: background .12s, color .12s;
+}
+.minitab-grip:hover { background: var(--bg-elev); color: var(--text); }
+.minitab-grip:active { cursor: grabbing; }
+
+.minitab-body {
+  flex: 1; width: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  border-radius: 10px; color: var(--accent);
+  transition: background .12s;
+}
+.minitab-body:hover { background: var(--bg-elev); }
+.minitab-count {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}

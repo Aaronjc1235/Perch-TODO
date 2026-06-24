@@ -134,24 +134,21 @@ export async function deleteCompleted(date: string): Promise<void> {
   await db.execute('DELETE FROM tasks WHERE scheduled_date = $1 AND completed = 1', [date]);
 }
 
-/**
- * Pick the task most relevant "right now" by schedule, for the mini widget:
- * the most recently started pending task, else the next upcoming, else the
- * first pending one. Returns null when there is nothing pending.
- */
-export function pickCurrentTask(tasks: Task[]): Task | null {
-  const pending = tasks.filter((t) => !t.completed);
-  if (pending.length === 0) return null;
-  const now = nowTime();
-  const withTime = pending.filter((t) => t.start_time) as (Task & { start_time: string })[];
-  const byTime = (a: { start_time: string }, b: { start_time: string }) =>
-    a.start_time.localeCompare(b.start_time);
+// ---- key/value settings (autostart flag, mini-widget dock position, etc.) --
 
-  const started = withTime.filter((t) => t.start_time <= now).sort(byTime);
-  if (started.length) return started[started.length - 1];
+export async function getSetting(key: string): Promise<string | null> {
+  const db = await getDb();
+  const rows = await db.select<{ value: string }[]>(
+    'SELECT value FROM settings WHERE key = $1',
+    [key],
+  );
+  return rows[0]?.value ?? null;
+}
 
-  const upcoming = withTime.filter((t) => t.start_time > now).sort(byTime);
-  if (upcoming.length) return upcoming[0];
-
-  return pending[0];
+export async function setSetting(key: string, value: string): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2',
+    [key, value],
+  );
 }

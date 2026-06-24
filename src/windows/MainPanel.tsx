@@ -125,6 +125,14 @@ export default function MainPanel() {
         <button className="ghost sm" title="Minimizar a barra" onClick={minimize} aria-label="Minimizar">
           <Minimize size={16} />
         </button>
+        <button
+          className="ghost sm"
+          title="Cerrar (sigue activo en segundo plano)"
+          onClick={() => getCurrentWindow().hide()}
+          aria-label="Cerrar"
+        >
+          <Close size={15} strokeWidth={1.9} />
+        </button>
       </div>
 
       <div className="panel-head" data-tauri-drag-region>
