@@ -3,12 +3,42 @@ use tauri_plugin_positioner::{Position, WindowExt};
 
 /// Show the main "Panel del día" window (create-on-demand is unnecessary since
 /// it is declared in tauri.conf.json, but it may be hidden in the tray).
+/// Showing the panel always dismisses the mini widget (they are mutually
+/// exclusive states of the app).
 pub fn show_main(app: &AppHandle) {
+    if let Some(mini) = app.get_webview_window("mini") {
+        let _ = mini.hide();
+    }
     if let Some(win) = app.get_webview_window("main") {
         let _ = win.show();
         let _ = win.unminimize();
         let _ = win.set_focus();
     }
+}
+
+/// Open (or show) the small always-on-top widget in the bottom-right corner.
+pub fn open_mini(app: &AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("mini") {
+        let _ = win.show();
+        let _ = win.set_always_on_top(true);
+        let _ = win.move_window(Position::BottomRight);
+        let _ = win.emit("mini-refresh", ());
+        return Ok(());
+    }
+
+    let win = WebviewWindowBuilder::new(app, "mini", WebviewUrl::App("index.html".into()))
+        .title("TODO")
+        .inner_size(232.0, 56.0)
+        .decorations(false)
+        .transparent(true)
+        .skip_taskbar(true)
+        .always_on_top(true)
+        .resizable(false)
+        .build()
+        .map_err(|e| format!("build mini window: {e}"))?;
+
+    let _ = win.move_window(Position::BottomRight);
+    Ok(())
 }
 
 /// Toggle main window visibility (used by the tray left-click).

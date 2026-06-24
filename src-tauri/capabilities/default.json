@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capabilities for all app windows (main, sticky-*, overlay-*)",
-  "windows": ["main", "sticky-*", "overlay-*", "quick-add"],
+  "windows": ["main", "sticky-*", "overlay-*", "mini", "quick-add"],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",

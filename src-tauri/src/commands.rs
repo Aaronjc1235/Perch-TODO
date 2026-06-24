@@ -11,6 +11,22 @@ pub fn open_sticky_note(app: AppHandle, id: i64) -> Result<(), String> {
     windows::open_sticky(&app, id)
 }
 
+/// Collapse the app into the bottom-right floating widget (hides the panel).
+#[tauri::command]
+pub fn minimize_to_widget(app: AppHandle) -> Result<(), String> {
+    windows::open_mini(&app)?;
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.hide();
+    }
+    Ok(())
+}
+
+/// Restore the full day panel from the widget.
+#[tauri::command]
+pub fn restore_main(app: AppHandle) {
+    windows::show_main(&app);
+}
+
 /// Reschedule a reminder N minutes into the future and re-arm it.
 #[tauri::command]
 pub async fn snooze_task(

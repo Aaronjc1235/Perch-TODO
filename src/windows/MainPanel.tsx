@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import {
   isPermissionGranted,
   requestPermission,
@@ -20,7 +21,7 @@ function prettyDate(d: string): string {
 }
 
 export default function MainPanel() {
-  const { date, tasks, refresh, setDate, add, toggle, remove } = useTasks();
+  const { date, tasks, refresh, setDate, add, toggle, remove, clearCompleted } = useTasks();
   const [title, setTitle] = useState('');
   // Default to the machine's current local time, end one hour later.
   const [start, setStart] = useState(() => nowTime());
@@ -28,6 +29,8 @@ export default function MainPanel() {
   const [remind, setRemind] = useState(false);
   const [color, setColor] = useState(COLORS[0]);
   const [error, setError] = useState<string | null>(null);
+  const [pinned, setPinned] = useState(false);
+  const [showDone, setShowDone] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
   // Initial load + ensure notification permission.
@@ -51,6 +54,14 @@ export default function MainPanel() {
       unlisten.then((fns) => fns.forEach((f) => f()));
     };
   }, [refresh]);
+
+  const togglePin = async () => {
+    const next = !pinned;
+    setPinned(next);
+    await getCurrentWindow().setAlwaysOnTop(next);
+  };
+
+  const minimize = () => invoke('minimize_to_widget').catch(console.error);
 
   const shiftDay = (delta: number) => {
     const d = new Date(`${date}T00:00:00`);
@@ -88,17 +99,30 @@ export default function MainPanel() {
   return (
     <div className="panel">
       <header className="panel-head" data-tauri-drag-region>
+        <div className="panel-tools">
+          <button
+            className={`pin${pinned ? ' on' : ''}`}
+            onClick={togglePin}
+            title="Fijar encima de todo"
+          >
+            📌
+          </button>
+          <button className="pin" onClick={minimize} title="Minimizar a widget">
+            ⤡
+          </button>
+        </div>
         <div className="date-nav">
           <button className="ghost" onClick={() => shiftDay(-1)} title="Día anterior">
             ‹
           </button>
           <div className="date-label">
-            <strong>{prettyDate(date)}</strong>
-            {date !== todayStr() && (
-              <button className="link" onClick={() => setDate(todayStr())}>
-                hoy
-              </button>
-            )}
+            <strong
+              className={date !== todayStr() ? 'clickable' : undefined}
+              onClick={date !== todayStr() ? () => setDate(todayStr()) : undefined}
+              title={date !== todayStr() ? 'Volver a hoy' : undefined}
+            >
+              {prettyDate(date)}
+            </strong>
           </div>
           <button className="ghost" onClick={() => shiftDay(1)} title="Día siguiente">
             ›
@@ -155,10 +179,28 @@ export default function MainPanel() {
         {pending.map((t) => (
           <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />
         ))}
-        {done.length > 0 && <div className="section-sep">Completadas</div>}
-        {done.map((t) => (
-          <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />
-        ))}
+        {done.length > 0 && (
+          <>
+            <button className="section-sep clickable-sep" onClick={() => setShowDone((v) => !v)}>
+              <span className={`chevron${showDone ? ' open' : ''}`}>›</span>
+              Completadas ({done.length})
+              {showDone && (
+                <span
+                  className="clear-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearCompleted();
+                  }}
+                >
+                  Limpiar
+                </span>
+              )}
+            </button>
+            {showDone && done.map((t) => (
+              <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />
+            ))}
+          </>
+        )}
       </div>
     </div>
   );

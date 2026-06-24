@@ -34,6 +34,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::open_sticky_note,
+            commands::minimize_to_widget,
+            commands::restore_main,
             commands::snooze_task,
             commands::complete_task,
             commands::dismiss_overlay,

@@ -128,3 +128,30 @@ export async function deleteTask(id: number): Promise<void> {
   const db = await getDb();
   await db.execute('DELETE FROM tasks WHERE id = $1', [id]);
 }
+
+export async function deleteCompleted(date: string): Promise<void> {
+  const db = await getDb();
+  await db.execute('DELETE FROM tasks WHERE scheduled_date = $1 AND completed = 1', [date]);
+}
+
+/**
+ * Pick the task most relevant "right now" by schedule, for the mini widget:
+ * the most recently started pending task, else the next upcoming, else the
+ * first pending one. Returns null when there is nothing pending.
+ */
+export function pickCurrentTask(tasks: Task[]): Task | null {
+  const pending = tasks.filter((t) => !t.completed);
+  if (pending.length === 0) return null;
+  const now = nowTime();
+  const withTime = pending.filter((t) => t.start_time) as (Task & { start_time: string })[];
+  const byTime = (a: { start_time: string }, b: { start_time: string }) =>
+    a.start_time.localeCompare(b.start_time);
+
+  const started = withTime.filter((t) => t.start_time <= now).sort(byTime);
+  if (started.length) return started[started.length - 1];
+
+  const upcoming = withTime.filter((t) => t.start_time > now).sort(byTime);
+  if (upcoming.length) return upcoming[0];
+
+  return pending[0];
+}

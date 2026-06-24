@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   createTask,
+  deleteCompleted,
   deleteTask,
   listTasksByDate,
   todayStr,
@@ -18,6 +19,7 @@ interface TaskState {
   add: (t: NewTask) => Promise<void>;
   toggle: (id: number, completed: boolean) => Promise<void>;
   remove: (id: number) => Promise<void>;
+  clearCompleted: () => Promise<void>;
   edit: (id: number, fields: Record<string, unknown>) => Promise<void>;
 }
 
@@ -48,6 +50,10 @@ export const useTasks = create<TaskState>((set, get) => ({
   },
   remove: async (id) => {
     await deleteTask(id);
+    await get().refresh();
+  },
+  clearCompleted: async () => {
+    await deleteCompleted(get().date);
     await get().refresh();
   },
   edit: async (id, fields) => {
