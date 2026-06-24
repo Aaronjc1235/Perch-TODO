@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getTask, updateTask } from '../db';
 import { COLORS, type Task } from '../types';
+import { Pin, Close } from '../components/Icons';
 
 export default function StickyNote({ id }: { id: number }) {
   const [task, setTask] = useState<Task | null>(null);
@@ -53,10 +54,10 @@ export default function StickyNote({ id }: { id: number }) {
         </div>
         <div className="sticky-tools">
           <button className={`pin${pinned ? ' on' : ''}`} onClick={togglePin} title="Fijar encima">
-            📌
+            <Pin size={15} strokeWidth={1.9} />
           </button>
           <button className="pin" onClick={() => getCurrentWindow().close()} title="Cerrar nota">
-            ✕
+            <Close size={15} />
           </button>
         </div>
       </div>
@@ -73,7 +74,7 @@ export default function StickyNote({ id }: { id: number }) {
       <textarea
         className="sticky-body"
         value={task.notes}
-        placeholder="Notas…"
+        placeholder="Escribe una nota…"
         onChange={(e) => {
           setTask({ ...task, notes: e.target.value });
           queueSave({ notes: e.target.value });

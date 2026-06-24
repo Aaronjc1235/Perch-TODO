@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { UpDown } from './Icons';
 
 type Meridiem = 'AM' | 'PM';
 
@@ -105,15 +106,13 @@ export default function TimeField({
       />
       <button
         type="button"
-        className="tf-ampm"
+        className={`tf-ampm${meridiem === 'AM' ? ' is-am' : ''}`}
         onClick={toggle}
         title="Cambiar AM / PM"
         aria-label={`Meridiano ${meridiem}, cambiar`}
       >
         <span className="tf-ampm-label">{meridiem}</span>
-        <span className="tf-arrow" aria-hidden>
-          ⇅
-        </span>
+        <UpDown className="tf-arrow" size={11} />
       </button>
     </div>
   );

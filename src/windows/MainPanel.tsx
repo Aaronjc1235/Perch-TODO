@@ -10,6 +10,18 @@ import { addHours, nowTime, reminderFrom, todayStr } from '../db';
 import { useTasks } from '../store';
 import { COLORS, type Task } from '../types';
 import TimeField from '../components/TimeField';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  NoteIcon,
+  Close,
+  Bell,
+  Clock,
+  Plus,
+  Minimize,
+  Pin,
+} from '../components/Icons';
 
 function prettyDate(d: string): string {
   const date = new Date(`${d}T00:00:00`);
@@ -95,40 +107,45 @@ export default function MainPanel() {
 
   const pending = tasks.filter((t) => !t.completed);
   const done = tasks.filter((t) => t.completed);
+  const isToday = date === todayStr();
 
   return (
     <div className="panel">
-      <header className="panel-head" data-tauri-drag-region>
-        <div className="panel-tools">
-          <button
-            className={`pin${pinned ? ' on' : ''}`}
-            onClick={togglePin}
-            title="Fijar encima de todo"
-          >
-            📌
-          </button>
-          <button className="pin" onClick={minimize} title="Minimizar a widget">
-            ⤡
-          </button>
-        </div>
+      <div className="panel-titlebar" data-tauri-drag-region>
+        <NoteIcon size={15} />
+        <span className="brand">TODO Sticky</span>
+        <button
+          className={`pin${pinned ? ' on' : ''}`}
+          onClick={togglePin}
+          title="Fijar encima de todo"
+          style={{ marginLeft: 'auto' }}
+        >
+          <Pin size={15} strokeWidth={1.9} />
+        </button>
+        <button className="ghost sm" title="Minimizar a barra" onClick={minimize} aria-label="Minimizar">
+          <Minimize size={16} />
+        </button>
+      </div>
+
+      <div className="panel-head" data-tauri-drag-region>
         <div className="date-nav">
-          <button className="ghost" onClick={() => shiftDay(-1)} title="Día anterior">
-            ‹
+          <button className="ghost" onClick={() => shiftDay(-1)} aria-label="Día anterior">
+            <ChevronLeft size={18} />
           </button>
           <div className="date-label">
             <strong
-              className={date !== todayStr() ? 'clickable' : undefined}
-              onClick={date !== todayStr() ? () => setDate(todayStr()) : undefined}
-              title={date !== todayStr() ? 'Volver a hoy' : undefined}
+              className={!isToday ? 'clickable' : undefined}
+              onClick={!isToday ? () => setDate(todayStr()) : undefined}
+              title={!isToday ? 'Volver a hoy' : undefined}
             >
               {prettyDate(date)}
             </strong>
           </div>
-          <button className="ghost" onClick={() => shiftDay(1)} title="Día siguiente">
-            ›
+          <button className="ghost" onClick={() => shiftDay(1)} aria-label="Día siguiente">
+            <ChevronRight size={18} />
           </button>
         </div>
-      </header>
+      </div>
 
       <form className="add-form" onSubmit={submit}>
         <input
@@ -139,16 +156,19 @@ export default function MainPanel() {
           onChange={(e) => setTitle(e.target.value)}
         />
         <div className="add-row">
-          <div className="field">
+          <label className="field">
             <span>Inicio</span>
             <TimeField value={start} onChange={setStart} ariaLabel="Inicio" />
-          </div>
-          <div className="field">
+          </label>
+          <label className="field">
             <span>Fin</span>
             <TimeField value={end} onChange={setEnd} ariaLabel="Fin" />
-          </div>
+          </label>
           <label className="field check">
             <input type="checkbox" checked={remind} onChange={(e) => setRemind(e.target.checked)} />
+            <span className="box">
+              <Check size={12} strokeWidth={3} />
+            </span>
             <span>Recordar</span>
           </label>
         </div>
@@ -159,20 +179,23 @@ export default function MainPanel() {
                 type="button"
                 key={c}
                 className={`swatch${c === color ? ' active' : ''}`}
-                style={{ background: c }}
+                style={{ background: c, color: c }}
                 onClick={() => setColor(c)}
                 aria-label={`color ${c}`}
               />
             ))}
           </div>
           <button type="submit" className="primary">
+            <Plus size={16} strokeWidth={2.4} />
             Agregar
           </button>
         </div>
         {error && <div className="form-error">No se pudo agregar: {error}</div>}
       </form>
 
-      <div className="task-list">
+      <div style={{ height: 1, background: 'var(--border)' }} />
+
+      <div className="task-list task-list--cards">
         {pending.length === 0 && done.length === 0 && (
           <p className="empty">Sin tareas para este día.</p>
         )}
@@ -182,8 +205,11 @@ export default function MainPanel() {
         {done.length > 0 && (
           <>
             <button className="section-sep clickable-sep" onClick={() => setShowDone((v) => !v)}>
-              <span className={`chevron${showDone ? ' open' : ''}`}>›</span>
-              Completadas ({done.length})
+              <span className={`chevron${showDone ? ' open' : ''}`}>
+                <ChevronRight size={12} />
+              </span>
+              <span className="label">Completadas ({done.length})</span>
+              <span className="rule" />
               {showDone && (
                 <span
                   className="clear-link"
@@ -215,35 +241,53 @@ function TaskRow({
   onToggle: (id: number, completed: boolean) => void;
   onRemove: (id: number) => void;
 }) {
+  const done = !!task.completed;
   const openSticky = () => invoke('open_sticky_note', { id: task.id }).catch(console.error);
+  const time = task.start_time
+    ? `${task.start_time}${task.end_time ? ' – ' + task.end_time : ''}`
+    : '';
+
   return (
-    <div className={`task${task.completed ? ' completed' : ''}`}>
-      <span className="dot" style={{ background: task.color }} />
+    <div className={`task${done ? ' completed' : ''}`}>
       <button
         className="checkbox"
-        onClick={() => onToggle(task.id, !task.completed)}
-        title={task.completed ? 'Marcar pendiente' : 'Completar'}
+        onClick={() => onToggle(task.id, !done)}
+        aria-label={done ? 'Marcar pendiente' : 'Completar'}
       >
-        {task.completed ? '✓' : ''}
+        {done && <Check size={13} strokeWidth={3} />}
       </button>
       <div className="task-main">
-        <div className="task-title">{task.title}</div>
-        {(task.start_time || task.remind_at) && (
+        <div className="task-title">
+          <span className="dot" style={{ background: task.color }} />
+          {task.title}
+        </div>
+        {(time || task.remind_at) && (
           <div className="task-meta">
-            {task.start_time && <span>{task.start_time}</span>}
-            {task.end_time && <span>– {task.end_time}</span>}
-            {task.remind_at && <span className="bell">🔔</span>}
+            {time && (
+              <span className="chip">
+                <Clock size={12} />
+                {time}
+              </span>
+            )}
+            {task.remind_at && (
+              <span className="chip reminder">
+                <Bell size={12} />
+                {task.remind_at.slice(11, 16)}
+              </span>
+            )}
           </div>
         )}
       </div>
-      <div className="task-actions">
-        <button className="ghost sm" onClick={openSticky} title="Abrir como nota">
-          ▢
-        </button>
-        <button className="ghost sm danger" onClick={() => onRemove(task.id)} title="Borrar">
-          ✕
-        </button>
-      </div>
+      {!done && (
+        <div className="task-actions">
+          <button className="ghost sm" onClick={openSticky} title="Abrir como nota">
+            <NoteIcon size={16} strokeWidth={1.8} />
+          </button>
+          <button className="ghost sm danger" onClick={() => onRemove(task.id)} title="Borrar">
+            <Close size={15} strokeWidth={1.9} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

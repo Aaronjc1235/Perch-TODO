@@ -3,19 +3,20 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import MainPanel from './windows/MainPanel';
 import StickyNote from './windows/StickyNote';
 import OverlayReminder from './windows/OverlayReminder';
-import MiniWidget from './windows/MiniWidget';
+import MiniBar from './windows/MiniBar';
 
 /**
- * Single bundle, three window types — routed by the window's label:
+ * Single bundle, window types routed by the window's label:
  *   main           → day panel
  *   sticky-<id>    → sticky note for task <id>
  *   overlay-<id>   → reminder overlay for task <id>
+ *   mini           → collapsed app (mini bar)
  */
 export default function App() {
   const label = useMemo(() => getCurrentWindow().label, []);
 
   if (label === 'mini') {
-    return <MiniWidget />;
+    return <MiniBar />;
   }
   if (label.startsWith('sticky-')) {
     return <StickyNote id={Number(label.slice('sticky-'.length))} />;

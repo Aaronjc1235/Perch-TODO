@@ -4,6 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import { getTask } from '../db';
 import type { Task } from '../types';
+import { Bell, Close, Clock } from '../components/Icons';
 
 export default function OverlayReminder({ id }: { id: number }) {
   const [task, setTask] = useState<Task | null>(null);
@@ -25,13 +26,21 @@ export default function OverlayReminder({ id }: { id: number }) {
     <div className="overlay">
       <div className="overlay-head" data-tauri-drag-region>
         <span className="overlay-tag" style={{ background: task?.color ?? '#7aa2f7' }} />
-        <span className="overlay-kicker">Recordatorio</span>
-        <button className="overlay-x" onClick={close} title="Cerrar">
-          ✕
+        <span className="overlay-kicker">
+          <Bell size={13} />
+          Recordatorio
+        </span>
+        <button className="overlay-x" onClick={close} aria-label="Cerrar">
+          <Close size={15} />
         </button>
       </div>
       <div className="overlay-title">{task?.title ?? '…'}</div>
-      {task?.start_time && <div className="overlay-time">A las {task.start_time}</div>}
+      {task?.start_time && (
+        <div className="overlay-time">
+          <Clock size={14} />
+          A las {task.start_time}
+        </div>
+      )}
       <div className="overlay-actions">
         <button className="primary" onClick={done}>
           Hecho
