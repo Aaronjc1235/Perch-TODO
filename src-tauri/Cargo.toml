@@ -1,7 +1,7 @@
 [package]
 name = "tauri-app"
 version = "0.1.0"
-description = "TODO Sticky"
+description = "Perch TODO"
 authors = ["you"]
 edition = "2021"
 

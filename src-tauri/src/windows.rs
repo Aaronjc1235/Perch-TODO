@@ -30,7 +30,7 @@ pub fn open_mini(app: &AppHandle) -> Result<(), String> {
     // Starts NOT pinned (not always-on-top): per spec, the minimized widget
     // should only overlay other windows once the user explicitly pins it.
     let win = WebviewWindowBuilder::new(app, "mini", WebviewUrl::App("index.html".into()))
-        .title("TODO")
+        .title("Perch TODO")
         .inner_size(320.0, 54.0)
         .decorations(false)
         .transparent(true)

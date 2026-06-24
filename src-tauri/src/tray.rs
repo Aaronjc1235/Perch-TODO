@@ -46,7 +46,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
     TrayIconBuilder::with_id("main-tray")
         .icon(icon)
         .icon_as_template(true)
-        .tooltip("TODO Sticky")
+        .tooltip("Perch TODO")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {

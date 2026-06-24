@@ -113,7 +113,7 @@ export default function MainPanel() {
     <div className="panel">
       <div className="panel-titlebar" data-tauri-drag-region>
         <NoteIcon size={15} />
-        <span className="brand">TODO Sticky</span>
+        <span className="brand">Perch TODO</span>
         <button
           className={`pin${pinned ? ' on' : ''}`}
           onClick={togglePin}
