@@ -577,6 +577,10 @@ textarea.notes-input {
   color: var(--text);
 }
 
+/* Ultra-slim: a third, even narrower stop reached by clicking the slim
+   horizontal tab again — just the dot + count, no task info. */
+.minitab-body--ultra { padding: 0 6px; gap: 6px; }
+
 /* Pin button on both tab shapes: a thin strip above the body on the square
    tab (column layout), a small icon at the end of the row on the horizontal
    strip — same on/hover treatment as the bar's tools. */

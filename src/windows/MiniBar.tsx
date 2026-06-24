@@ -21,11 +21,13 @@ interface Dock {
 }
 
 const BAR_SIZE = { w: 320, h: 54 };
-// Nivel 2 takes two shapes: a slim horizontal strip when docked top/bottom
-// (there's room to stay wide and thin), or a small square when docked to a
-// side — there is no "vertical bar" shape, so crossing onto a side edge
-// always forces the square tab.
+// Nivel 2 has three shapes: a slim horizontal strip when docked top/bottom
+// (room for the next task's time + title), an even narrower "ultra-slim"
+// strip when docked top/bottom (just the dot + count), or a small square
+// when docked to a side — there is no "vertical bar" shape, so crossing
+// onto a side edge always forces the square tab.
 const TAB_SIZE_HORIZONTAL = { w: 240, h: 34 };
+const TAB_SIZE_ULTRA = { w: 92, h: 34 };
 const TAB_SIZE_SQUARE = { w: 60, h: 60 };
 const MARGIN = 10; // logical px gap kept from the screen edge
 const DEFAULT_DOCK: Dock = { edge: 'right', offset: 0.85 };
@@ -37,9 +39,14 @@ const DRAG_THRESHOLD = 4;
 // before the widget transfers onto that edge mid-drag.
 const EDGE_TRANSFER_ZONE = 40;
 
-function sizeForLevel(level: 1 | 2, edge: Edge): { w: number; h: number } {
+type Density = 'slim' | 'ultra';
+
+function sizeForLevel(level: 1 | 2, edge: Edge, density: Density = 'slim'): { w: number; h: number } {
   if (level === 1) return BAR_SIZE;
-  return edge === 'top' || edge === 'bottom' ? TAB_SIZE_HORIZONTAL : TAB_SIZE_SQUARE;
+  if (edge === 'top' || edge === 'bottom') {
+    return density === 'ultra' ? TAB_SIZE_ULTRA : TAB_SIZE_HORIZONTAL;
+  }
+  return TAB_SIZE_SQUARE;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -74,12 +81,12 @@ function saveDock(dock: Dock) {
 }
 
 /** Resize + reposition the window flush against the given dock edge. */
-async function applyPlacement(level: 1 | 2, dock: Dock) {
+async function applyPlacement(level: 1 | 2, dock: Dock, density: Density = 'slim') {
   const monitor = await currentMonitor();
   if (!monitor) return;
   const win = getCurrentWindow();
   const sf = monitor.scaleFactor;
-  const logical = sizeForLevel(level, dock.edge);
+  const logical = sizeForLevel(level, dock.edge, density);
   const w = Math.round(logical.w * sf);
   const h = Math.round(logical.h * sf);
   const margin = Math.round(MARGIN * sf);
@@ -123,8 +130,12 @@ export default function MiniBar() {
   const [pinned, setPinned] = useState(false);
   const [level, setLevel] = useState<1 | 2>(1);
   const [edge, setEdge] = useState<Edge>(DEFAULT_DOCK.edge);
+  // Only meaningful for the horizontal (top/bottom) tab: 'slim' shows the
+  // next task's time + title, 'ultra' shows just the dot + count.
+  const [density, setDensity] = useState<Density>('slim');
   const dockRef = useRef<Dock>(DEFAULT_DOCK);
   const levelRef = useRef<1 | 2>(1);
+  const densityRef = useRef<Density>('slim');
   // Set true the instant a press turns into a real drag; checked by the
   // click handlers so a drag-release never also fires as a click.
   const suppressClickRef = useRef(false);
@@ -132,6 +143,10 @@ export default function MiniBar() {
   useEffect(() => {
     levelRef.current = level;
   }, [level]);
+
+  useEffect(() => {
+    densityRef.current = density;
+  }, [density]);
 
   useEffect(() => {
     const load = () => listTasksByDate(todayStr()).then(setTasks);
@@ -249,9 +264,16 @@ export default function MiniBar() {
           levelRef.current = nextLevel;
           setLevel(nextLevel);
         }
+        // A fresh arrival on a top/bottom edge always starts at the wider
+        // slim shape — ultra is only reached by an explicit click while
+        // already docked there.
+        if ((nextEdge === 'top' || nextEdge === 'bottom') && densityRef.current !== 'slim') {
+          densityRef.current = 'slim';
+          setDensity('slim');
+        }
       }
 
-      const size = sizeForLevel(nextLevel, nextEdge);
+      const size = sizeForLevel(nextLevel, nextEdge, densityRef.current);
       const margin = Math.round(MARGIN * sf);
       const w = Math.round(size.w * sf);
       const h = Math.round(size.h * sf);
@@ -321,7 +343,19 @@ export default function MiniBar() {
 
   const collapseToTab = async () => {
     setLevel(2);
-    await applyPlacement(2, dockRef.current);
+    setDensity('slim');
+    densityRef.current = 'slim';
+    await applyPlacement(2, dockRef.current, 'slim');
+  };
+
+  const shrinkToUltra = async () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    setDensity('ultra');
+    densityRef.current = 'ultra';
+    await applyPlacement(2, dockRef.current, 'ultra');
   };
 
   const expandToBar = async () => {
@@ -330,6 +364,8 @@ export default function MiniBar() {
       return;
     }
     setLevel(1);
+    setDensity('slim');
+    densityRef.current = 'slim';
     await applyPlacement(1, dockRef.current);
   };
 
@@ -345,14 +381,38 @@ export default function MiniBar() {
   if (level === 2) {
     const horizontal = edge === 'top' || edge === 'bottom';
 
+    if (horizontal && density === 'ultra') {
+      return (
+        <div className="minitab minitab--horizontal minitab--ultra">
+          <button
+            className="minitab-body minitab-body--horizontal minitab-body--ultra"
+            onClick={expandToBar}
+            title="Abrir barra"
+            aria-label="Abrir barra"
+          >
+            <span className={`minitab-dot${empty ? ' empty' : ''}`} />
+            <span className="minitab-count">{pending.length}</span>
+          </button>
+          <button
+            className={`pin minitab-pin${pinned ? ' on' : ''}`}
+            data-no-drag
+            title="Fijar encima"
+            onClick={togglePin}
+          >
+            <Pin size={12} strokeWidth={1.9} />
+          </button>
+        </div>
+      );
+    }
+
     if (horizontal) {
       return (
         <div className="minitab minitab--horizontal">
           <button
             className="minitab-body minitab-body--horizontal"
-            onClick={expandToBar}
-            title="Abrir barra"
-            aria-label="Abrir barra"
+            onClick={shrinkToUltra}
+            title="Achicar más"
+            aria-label="Achicar más"
           >
             <span className={`minitab-dot${empty ? ' empty' : ''}`} />
             <span className="minitab-count">{pending.length}</span>
