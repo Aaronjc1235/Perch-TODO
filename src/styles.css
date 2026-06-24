@@ -424,23 +424,15 @@ textarea.notes-input {
    ===================================================================== */
 .minibar {
   display: flex; align-items: center; gap: 10px;
-  width: 320px; height: 54px; padding: 0 8px 0 6px;
+  width: 320px; height: 54px; padding: 0 8px 0 12px;
   background: var(--bg-soft);
   border: 1px solid var(--border-strong);
   border-radius: 14px;
   box-shadow: 0 16px 34px -12px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .04);
   color: var(--text);
+  cursor: grab;
 }
-
-/* manija de arrastre: única zona que inicia el movimiento de la ventana,
-   separada de los botones para que arrastrar y hacer click no se mezclen */
-.minibar-grip {
-  width: 18px; height: 38px; flex: none; border-radius: 8px;
-  display: grid; place-items: center; color: var(--text-dim);
-  cursor: grab; transition: background .12s, color .12s;
-}
-.minibar-grip:hover { background: var(--bg-elev); color: var(--text); }
-.minibar-grip:active { cursor: grabbing; }
+.minibar:active { cursor: grabbing; }
 @media (prefers-color-scheme: light) {
   .minibar { box-shadow: 0 14px 30px -12px rgba(52, 59, 88, .3), inset 0 1px 0 rgba(255, 255, 255, .5); }
 }
@@ -462,7 +454,8 @@ textarea.notes-input {
 
 .minibar-text {
   flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;
-  cursor: pointer; border-radius: 8px; padding: 2px 4px; margin: -2px -4px;
+  align-items: flex-start; text-align: left;
+  cursor: pointer; border-radius: 8px; padding: 5px 4px;
   transition: background .12s;
 }
 .minibar-text:hover { background: var(--hover); }
@@ -523,8 +516,8 @@ textarea.notes-input {
 
 /* =====================================================================
    PESTAÑA MINIMIZADA (.minitab) — Nivel 2, más discreto que .minibar.
-   Ventana frameless ~60×60 acoplada a un borde de pantalla. Clic en el
-   cuerpo restaura la barra (.minibar); la manija solo arrastra/reubica.
+   Ventana frameless ~60×60 acoplada a un borde de pantalla. Toda la
+   superficie es arrastrable salvo el botón interior (clic = abrir barra).
    ===================================================================== */
 .minitab {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -534,24 +527,18 @@ textarea.notes-input {
   border-radius: 14px;
   box-shadow: 0 16px 34px -12px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .04);
   color: var(--text);
+  cursor: grab;
 }
+.minitab:active { cursor: grabbing; }
 @media (prefers-color-scheme: light) {
   .minitab { box-shadow: 0 14px 30px -12px rgba(52, 59, 88, .3), inset 0 1px 0 rgba(255, 255, 255, .5); }
 }
-
-.minitab-grip {
-  width: 100%; height: 10px; border-radius: 6px;
-  display: grid; place-items: center; color: var(--text-dim);
-  cursor: grab; transition: background .12s, color .12s;
-}
-.minitab-grip:hover { background: var(--bg-elev); color: var(--text); }
-.minitab-grip:active { cursor: grabbing; }
 
 .minitab-body {
   flex: 1; width: 100%; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 2px;
   border-radius: 10px; color: var(--accent);
-  transition: background .12s;
+  transition: background .12s; cursor: pointer;
 }
 .minitab-body:hover { background: var(--bg-elev); }
 .minitab-count {
@@ -562,18 +549,14 @@ textarea.notes-input {
 /* Variante horizontal de .minitab — "tirita" angosta, solo cuando el
    widget está acoplado al borde superior o inferior (no a un lado). */
 .minitab.minitab--horizontal {
-  flex-direction: row; align-items: center; gap: 6px;
-  width: auto; height: 34px; padding: 4px 10px 4px 4px;
+  flex-direction: row; align-items: center; gap: 0;
+  width: auto; height: 34px; padding: 4px;
   border-radius: 17px;
-}
-
-.minitab-grip--horizontal {
-  width: 14px; height: 100%; flex: none; border-radius: 8px;
 }
 
 .minitab-body--horizontal {
   flex-direction: row; width: auto; justify-content: flex-start;
-  gap: 7px; padding: 0 4px; border-radius: 13px;
+  gap: 7px; padding: 0 8px; border-radius: 13px;
   font-size: 12px; color: var(--text); white-space: nowrap;
 }
 

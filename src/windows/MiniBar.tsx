@@ -9,7 +9,7 @@ import {
 import { listen } from '@tauri-apps/api/event';
 import { getSetting, listTasksByDate, setSetting, todayStr } from '../db';
 import type { Task } from '../types';
-import { Pin, Expand, Clock, Check, Minimize, Grip, NoteIcon } from '../components/Icons';
+import { Pin, Expand, Clock, Check, Minimize, NoteIcon } from '../components/Icons';
 
 type Edge = 'top' | 'bottom' | 'left' | 'right';
 interface Dock {
@@ -27,6 +27,13 @@ const TAB_SIZE_SQUARE = { w: 60, h: 60 };
 const MARGIN = 10; // logical px gap kept from the screen edge
 const DEFAULT_DOCK: Dock = { edge: 'right', offset: 0.85 };
 const DOCK_SETTING_KEY = 'mini_dock';
+// How long to wait, after the window stops moving, before treating a drag as
+// finished and snapping it. Must be long enough that a brief pause mid-drag
+// doesn't get mistaken for the end of the gesture.
+const SETTLE_MS = 220;
+// Safety net: if a mousedown never produces any movement (a plain click) and
+// for some reason never gets cleared, force the "armed" flag off after this.
+const ARM_TIMEOUT_MS = 1500;
 
 function sizeForLevel(level: 1 | 2, edge: Edge): { w: number; h: number } {
   if (level === 1) return BAR_SIZE;
@@ -124,9 +131,11 @@ async function computeDockFromDrag(): Promise<Dock | null> {
 
 /**
  * Collapsed state of the app, with two levels: a compact bar (next task +
- * day progress) and an even smaller tab (just the pending count). Both are
- * draggable but only ever snap flush against one of the four screen edges —
- * dragging never leaves them floating mid-screen.
+ * day progress) and an even smaller tab (just the pending count). The whole
+ * surface is draggable — Tauri's `data-tauri-drag-region="deep"` already
+ * exempts real <button> elements, so clicking pin/collapse/expand never
+ * starts a drag. Either level only ever snaps flush against one of the four
+ * screen edges; it can't be left floating mid-screen.
  */
 export default function MiniBar() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -134,7 +143,14 @@ export default function MiniBar() {
   const [level, setLevel] = useState<1 | 2>(1);
   const [edge, setEdge] = useState<Edge>(DEFAULT_DOCK.edge);
   const dockRef = useRef<Dock>(DEFAULT_DOCK);
-  const moveTimer = useRef<number | null>(null);
+  const levelRef = useRef<1 | 2>(1);
+  const armedRef = useRef(false);
+  const settleTimer = useRef<number | null>(null);
+  const armTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    levelRef.current = level;
+  }, [level]);
 
   useEffect(() => {
     const load = () => listTasksByDate(todayStr()).then(setTasks);
@@ -160,32 +176,60 @@ export default function MiniBar() {
     })();
   }, []);
 
-  // The OS drives the drag; we just watch window-moved events and, once they
-  // go quiet (drag released), snap to the nearest edge and persist it.
+  // Dragging is handled entirely by Tauri's native data-tauri-drag-region
+  // (see the root element below) — it already ignores real <button>s, so we
+  // don't need a dedicated grip. What we still need is to know when a drag
+  // session is happening, so we only snap-to-edge in response to genuine
+  // user movement and never react to our own setPosition/setSize calls
+  // (that feedback loop was the cause of the "pulsing" near side edges).
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    const disarm = () => {
+      armedRef.current = false;
+      if (armTimer.current) {
+        window.clearTimeout(armTimer.current);
+        armTimer.current = null;
+      }
+    };
+
+    const onMouseDown = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('button')) return;
+      armedRef.current = true;
+      if (armTimer.current) window.clearTimeout(armTimer.current);
+      armTimer.current = window.setTimeout(disarm, ARM_TIMEOUT_MS);
+    };
+
+    let unlistenMoved: (() => void) | undefined;
     getCurrentWindow()
       .onMoved(() => {
-        if (moveTimer.current) window.clearTimeout(moveTimer.current);
-        moveTimer.current = window.setTimeout(async () => {
+        if (!armedRef.current) return; // ignore moves we caused ourselves
+        if (settleTimer.current) window.clearTimeout(settleTimer.current);
+        settleTimer.current = window.setTimeout(async () => {
+          disarm(); // stop reacting before we reposition it ourselves
           const dock = await computeDockFromDrag();
           if (!dock) return;
           dockRef.current = dock;
           setEdge(dock.edge);
-          await applyPlacement(level, dock);
+          await applyPlacement(levelRef.current, dock);
           saveDock(dock);
-        }, 160);
+        }, SETTLE_MS);
       })
       .then((fn) => {
-        unlisten = fn;
+        unlistenMoved = fn;
       });
-    return () => unlisten?.();
-  }, [level]);
 
-  const startDrag = (e: React.MouseEvent) => {
-    e.preventDefault();
-    getCurrentWindow().startDragging().catch(console.error);
-  };
+    // Capture phase: Tauri's own drag-region script listens on `document` in
+    // the bubble phase and calls stopImmediatePropagation() once it decides to
+    // start a native drag — a bubble-phase listener of ours would never see
+    // that event. Capture always runs before any bubble-phase listener, so
+    // this fires regardless of what the native script does afterward.
+    window.addEventListener('mousedown', onMouseDown, true);
+    return () => {
+      window.removeEventListener('mousedown', onMouseDown, true);
+      unlistenMoved?.();
+      if (settleTimer.current) window.clearTimeout(settleTimer.current);
+      if (armTimer.current) window.clearTimeout(armTimer.current);
+    };
+  }, []);
 
   const togglePin = async () => {
     const next = !pinned;
@@ -219,15 +263,7 @@ export default function MiniBar() {
 
     if (horizontal) {
       return (
-        <div className="minitab minitab--horizontal">
-          <button
-            className="minitab-grip minitab-grip--horizontal"
-            onMouseDown={startDrag}
-            title="Mover"
-            aria-label="Mover"
-          >
-            <Grip size={10} />
-          </button>
+        <div className="minitab minitab--horizontal" data-tauri-drag-region="deep">
           <button
             className="minitab-body minitab-body--horizontal"
             onClick={expandToBar}
@@ -249,10 +285,7 @@ export default function MiniBar() {
     }
 
     return (
-      <div className="minitab">
-        <button className="minitab-grip" onMouseDown={startDrag} title="Mover" aria-label="Mover">
-          <Grip size={12} />
-        </button>
+      <div className="minitab" data-tauri-drag-region="deep">
         <button className="minitab-body" onClick={expandToBar} title="Abrir" aria-label="Abrir">
           <NoteIcon size={14} />
           <span className="minitab-count">{pending.length}</span>
@@ -262,11 +295,7 @@ export default function MiniBar() {
   }
 
   return (
-    <div className="minibar">
-      <button className="minibar-grip" onMouseDown={startDrag} title="Mover" aria-label="Mover">
-        <Grip size={13} />
-      </button>
-
+    <div className="minibar" data-tauri-drag-region="deep">
       {empty ? (
         <div className="minibar-status empty">
           <Check size={16} />
@@ -277,7 +306,7 @@ export default function MiniBar() {
         </div>
       )}
 
-      <div className="minibar-text" onClick={expandToPanel} title="Abrir panel">
+      <button className="minibar-text" onClick={expandToPanel} title="Abrir panel">
         {empty ? (
           <>
             <span className="line">Sin tareas</span>
@@ -293,7 +322,7 @@ export default function MiniBar() {
             </span>
           </>
         )}
-      </div>
+      </button>
 
       <div className="minibar-tools">
         <button className={`pin${pinned ? ' on' : ''}`} title="Fijar encima" onClick={togglePin}>

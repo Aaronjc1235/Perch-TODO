@@ -55,13 +55,3 @@ export const Expand = (p: P) => (
   <Svg {...p}><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></Svg>
 );
 export const Minimize = (p: P) => <Svg {...p}><path d="M5 12h14" /></Svg>;
-
-// Manija de arrastre (seis puntos) — área dedicada para mover el widget,
-// separada del área de click para que arrastrar y hacer click no se confundan.
-export const Grip = (p: P) => (
-  <Svg {...p} stroke="none">
-    {[7, 12, 17].flatMap((cx) =>
-      [6, 12, 18].map((cy) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.4" fill="currentColor" />),
-    )}
-  </Svg>
-);
