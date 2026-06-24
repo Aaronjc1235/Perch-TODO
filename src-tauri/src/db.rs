@@ -71,6 +71,20 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 "#,
         kind: MigrationKind::Up,
+    }, Migration {
+        version: 2,
+        description: "index_tasks_for_scale",
+        sql: r#"
+CREATE INDEX IF NOT EXISTS idx_tasks_scheduled_date ON tasks(scheduled_date);
+
+-- Partial index matching the scheduler's poll query exactly (remind_at IS
+-- NOT NULL AND reminded = 0 AND completed = 0): only pending reminders ever
+-- enter it, so it stays tiny regardless of how many tasks accumulate.
+CREATE INDEX IF NOT EXISTS idx_tasks_pending_reminders
+  ON tasks(remind_at)
+  WHERE remind_at IS NOT NULL AND reminded = 0 AND completed = 0;
+"#,
+        kind: MigrationKind::Up,
     }]
 }
 
