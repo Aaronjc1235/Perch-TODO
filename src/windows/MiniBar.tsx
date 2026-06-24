@@ -157,9 +157,10 @@ export default function MiniBar() {
     })();
   }, []);
 
-  // Manual drag loop. Excludes the small pin/collapse/expand icon buttons
-  // (.minibar-tools) so those stay click-only; everywhere else — including
-  // the task-text "open panel" button — supports both click and drag.
+  // Manual drag loop. Excludes anything marked [data-no-drag] (the small
+  // pin/collapse/expand icon buttons) so those stay click-only; everywhere
+  // else — including the task-text "open panel" button — supports both
+  // click and drag.
   useEffect(() => {
     let rafId: number | null = null;
     let dragging = false;
@@ -272,18 +273,28 @@ export default function MiniBar() {
     };
 
     const onDown = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).closest('.minibar-tools')) return;
+      if ((e.target as HTMLElement).closest('[data-no-drag]')) return;
       e.preventDefault();
       dragging = false;
-      currentMonitor().then((m) => {
+
+      // Register the mouseup listener FIRST, synchronously, before any
+      // awaiting — a fast click can otherwise release the button before
+      // currentMonitor()/cursorPosition() resolve below, leaving the
+      // resulting rAF loop with no listener left to ever stop it (it would
+      // then just keep following the cursor forever on the next move).
+      let cancelled = false;
+      onUp = () => {
+        cancelled = true;
+        finishDrag();
+      };
+      window.addEventListener('mouseup', onUp, { once: true });
+
+      Promise.all([currentMonitor(), cursorPosition()]).then(([m, c]) => {
+        if (cancelled) return;
         monitor = m;
-      });
-      cursorPosition().then((c) => {
         startCursor = { x: c.x, y: c.y };
         rafId = requestAnimationFrame(tick);
       });
-      onUp = () => finishDrag();
-      window.addEventListener('mouseup', onUp, { once: true });
     };
 
     window.addEventListener('mousedown', onDown);
@@ -353,12 +364,28 @@ export default function MiniBar() {
               </>
             )}
           </button>
+          <button
+            className={`pin minitab-pin${pinned ? ' on' : ''}`}
+            data-no-drag
+            title="Fijar encima"
+            onClick={togglePin}
+          >
+            <Pin size={12} strokeWidth={1.9} />
+          </button>
         </div>
       );
     }
 
     return (
       <div className="minitab">
+        <button
+          className={`pin minitab-pin minitab-pin--square${pinned ? ' on' : ''}`}
+          data-no-drag
+          title="Fijar encima"
+          onClick={togglePin}
+        >
+          <Pin size={10} strokeWidth={2} />
+        </button>
         <button className="minitab-body" onClick={expandToBar} title="Abrir" aria-label="Abrir">
           <NoteIcon size={14} />
           <span className="minitab-count">{pending.length}</span>
@@ -397,7 +424,7 @@ export default function MiniBar() {
         )}
       </button>
 
-      <div className="minibar-tools">
+      <div className="minibar-tools" data-no-drag>
         <button className={`pin${pinned ? ' on' : ''}`} title="Fijar encima" onClick={togglePin}>
           <Pin size={15} strokeWidth={1.9} />
         </button>

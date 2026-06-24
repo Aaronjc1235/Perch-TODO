@@ -576,3 +576,18 @@ textarea.notes-input {
   max-width: 140px; overflow: hidden; text-overflow: ellipsis;
   color: var(--text);
 }
+
+/* Pin button on both tab shapes: a thin strip above the body on the square
+   tab (column layout), a small icon at the end of the row on the horizontal
+   strip — same on/hover treatment as the bar's tools. */
+.minitab-pin {
+  display: grid; place-items: center; flex: none;
+  color: var(--text-dim); background: transparent;
+  border-radius: 6px; transition: background .12s, color .12s;
+}
+.minitab-pin:hover { background: var(--bg-elev); color: var(--text); }
+.minitab-pin.on { background: var(--accent-soft); color: var(--accent); }
+
+.minitab-pin--square { width: 100%; height: 14px; }
+
+.minitab--horizontal .minitab-pin { width: 24px; height: 24px; margin-left: 2px; }
