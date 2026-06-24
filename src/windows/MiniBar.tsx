@@ -3,8 +3,10 @@ import { invoke } from '@tauri-apps/api/core';
 import {
   getCurrentWindow,
   currentMonitor,
+  cursorPosition,
   PhysicalPosition,
   PhysicalSize,
+  type Monitor,
 } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import { getSetting, listTasksByDate, setSetting, todayStr } from '../db';
@@ -21,27 +23,31 @@ interface Dock {
 const BAR_SIZE = { w: 320, h: 54 };
 // Nivel 2 takes two shapes: a slim horizontal strip when docked top/bottom
 // (there's room to stay wide and thin), or a small square when docked to a
-// side (a horizontal strip would be awkward jammed against a vertical edge).
+// side — there is no "vertical bar" shape, so crossing onto a side edge
+// always forces the square tab.
 const TAB_SIZE_HORIZONTAL = { w: 240, h: 34 };
 const TAB_SIZE_SQUARE = { w: 60, h: 60 };
 const MARGIN = 10; // logical px gap kept from the screen edge
 const DEFAULT_DOCK: Dock = { edge: 'right', offset: 0.85 };
 const DOCK_SETTING_KEY = 'mini_dock';
-// How long to wait, after the window stops moving, before treating a drag as
-// finished and snapping it. Must be long enough that a brief pause mid-drag
-// doesn't get mistaken for the end of the gesture.
-const SETTLE_MS = 220;
-// Safety net: if a mousedown never produces any movement (a plain click) and
-// for some reason never gets cleared, force the "armed" flag off after this.
-const ARM_TIMEOUT_MS = 1500;
+// Cursor must move this many physical px from mousedown before a press
+// becomes a drag (otherwise it's a click).
+const DRAG_THRESHOLD = 4;
+// How close (physical px) the cursor must get to a perpendicular screen edge
+// before the widget transfers onto that edge mid-drag.
+const EDGE_TRANSFER_ZONE = 40;
 
 function sizeForLevel(level: 1 | 2, edge: Edge): { w: number; h: number } {
   if (level === 1) return BAR_SIZE;
   return edge === 'top' || edge === 'bottom' ? TAB_SIZE_HORIZONTAL : TAB_SIZE_SQUARE;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 function clamp01(n: number): number {
-  return Math.min(1, Math.max(0, n));
+  return clamp(n, 0, 1);
 }
 
 async function loadDock(): Promise<Dock> {
@@ -96,46 +102,19 @@ async function applyPlacement(level: 1 | 2, dock: Dock) {
   await win.setPosition(new PhysicalPosition(Math.round(x), Math.round(y)));
 }
 
-/** After a free drag, find the nearest screen edge and the offset along it. */
-async function computeDockFromDrag(): Promise<Dock | null> {
-  const win = getCurrentWindow();
-  const monitor = await currentMonitor();
-  if (!monitor) return null;
-  const pos = await win.outerPosition();
-  const size = await win.outerSize();
-  const { x: mx, y: my } = monitor.position;
-  const { width: mw, height: mh } = monitor.size;
-  const margin = Math.round(MARGIN * monitor.scaleFactor);
-
-  const cx = pos.x + size.width / 2;
-  const cy = pos.y + size.height / 2;
-  const distLeft = cx - mx;
-  const distRight = mx + mw - cx;
-  const distTop = cy - my;
-  const distBottom = my + mh - cy;
-  const min = Math.min(distLeft, distRight, distTop, distBottom);
-
-  let edge: Edge;
-  let offset: number;
-  if (min === distLeft || min === distRight) {
-    edge = min === distLeft ? 'left' : 'right';
-    const range = Math.max(1, mh - size.height - margin * 2);
-    offset = clamp01((pos.y - my - margin) / range);
-  } else {
-    edge = min === distTop ? 'top' : 'bottom';
-    const range = Math.max(1, mw - size.width - margin * 2);
-    offset = clamp01((pos.x - mx - margin) / range);
-  }
-  return { edge, offset };
-}
-
 /**
  * Collapsed state of the app, with two levels: a compact bar (next task +
- * day progress) and an even smaller tab (just the pending count). The whole
- * surface is draggable — Tauri's `data-tauri-drag-region="deep"` already
- * exempts real <button> elements, so clicking pin/collapse/expand never
- * starts a drag. Either level only ever snaps flush against one of the four
- * screen edges; it can't be left floating mid-screen.
+ * day progress) and an even smaller tab (just the pending count).
+ *
+ * Dragging is fully manual (not the native OS window-drag): we poll the
+ * global cursor position every frame and move the window ourselves. This is
+ * what lets us CONSTRAIN movement to a single axis along whichever edge the
+ * widget is currently docked to (e.g. only left/right while on the top
+ * edge), and live-detect when the cursor crosses into a perpendicular edge's
+ * zone to transfer the dock there — neither of which is possible with a
+ * free-form native window drag. It also means click vs. drag is entirely
+ * our own decision (a movement threshold), so the same clickable areas can
+ * both be dragged and clicked, anywhere on the widget.
  */
 export default function MiniBar() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -144,9 +123,9 @@ export default function MiniBar() {
   const [edge, setEdge] = useState<Edge>(DEFAULT_DOCK.edge);
   const dockRef = useRef<Dock>(DEFAULT_DOCK);
   const levelRef = useRef<1 | 2>(1);
-  const armedRef = useRef(false);
-  const settleTimer = useRef<number | null>(null);
-  const armTimer = useRef<number | null>(null);
+  // Set true the instant a press turns into a real drag; checked by the
+  // click handlers so a drag-release never also fires as a click.
+  const suppressClickRef = useRef(false);
 
   useEffect(() => {
     levelRef.current = level;
@@ -176,58 +155,140 @@ export default function MiniBar() {
     })();
   }, []);
 
-  // Dragging is handled entirely by Tauri's native data-tauri-drag-region
-  // (see the root element below) — it already ignores real <button>s, so we
-  // don't need a dedicated grip. What we still need is to know when a drag
-  // session is happening, so we only snap-to-edge in response to genuine
-  // user movement and never react to our own setPosition/setSize calls
-  // (that feedback loop was the cause of the "pulsing" near side edges).
+  // Manual drag loop. Excludes the small pin/collapse/expand icon buttons
+  // (.minibar-tools) so those stay click-only; everywhere else — including
+  // the task-text "open panel" button — supports both click and drag.
   useEffect(() => {
-    const disarm = () => {
-      armedRef.current = false;
-      if (armTimer.current) {
-        window.clearTimeout(armTimer.current);
-        armTimer.current = null;
+    let rafId: number | null = null;
+    let dragging = false;
+    let startCursor: { x: number; y: number } | null = null;
+    let monitor: Monitor | null = null;
+    let onUp: (() => void) | null = null;
+
+    const stopLoop = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
       }
     };
 
-    const onMouseDown = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).closest('button')) return;
-      armedRef.current = true;
-      if (armTimer.current) window.clearTimeout(armTimer.current);
-      armTimer.current = window.setTimeout(disarm, ARM_TIMEOUT_MS);
+    const finishDrag = async () => {
+      stopLoop();
+      if (onUp) {
+        window.removeEventListener('mouseup', onUp);
+        onUp = null;
+      }
+      if (!dragging || !monitor) {
+        dragging = false;
+        return;
+      }
+      dragging = false;
+      // Persist the offset along the (possibly new) edge from the window's
+      // actual settled position.
+      const win = getCurrentWindow();
+      const pos = await win.outerPosition();
+      const size = await win.outerSize();
+      const margin = Math.round(MARGIN * monitor.scaleFactor);
+      const { x: mx, y: my } = monitor.position;
+      const { width: mw, height: mh } = monitor.size;
+      const finalEdge = dockRef.current.edge;
+      let offset: number;
+      if (finalEdge === 'left' || finalEdge === 'right') {
+        const range = Math.max(1, mh - size.height - margin * 2);
+        offset = clamp01((pos.y - my - margin) / range);
+      } else {
+        const range = Math.max(1, mw - size.width - margin * 2);
+        offset = clamp01((pos.x - mx - margin) / range);
+      }
+      const dock = { edge: finalEdge, offset };
+      dockRef.current = dock;
+      saveDock(dock);
     };
 
-    let unlistenMoved: (() => void) | undefined;
-    getCurrentWindow()
-      .onMoved(() => {
-        if (!armedRef.current) return; // ignore moves we caused ourselves
-        if (settleTimer.current) window.clearTimeout(settleTimer.current);
-        settleTimer.current = window.setTimeout(async () => {
-          disarm(); // stop reacting before we reposition it ourselves
-          const dock = await computeDockFromDrag();
-          if (!dock) return;
-          dockRef.current = dock;
-          setEdge(dock.edge);
-          await applyPlacement(levelRef.current, dock);
-          saveDock(dock);
-        }, SETTLE_MS);
-      })
-      .then((fn) => {
-        unlistenMoved = fn;
-      });
+    const tick = async () => {
+      if (!startCursor || !monitor) return;
+      const cursor = await cursorPosition();
 
-    // Capture phase: Tauri's own drag-region script listens on `document` in
-    // the bubble phase and calls stopImmediatePropagation() once it decides to
-    // start a native drag — a bubble-phase listener of ours would never see
-    // that event. Capture always runs before any bubble-phase listener, so
-    // this fires regardless of what the native script does afterward.
-    window.addEventListener('mousedown', onMouseDown, true);
+      if (!dragging) {
+        const dx = cursor.x - startCursor.x;
+        const dy = cursor.y - startCursor.y;
+        if (Math.hypot(dx, dy) < DRAG_THRESHOLD) {
+          rafId = requestAnimationFrame(tick);
+          return;
+        }
+        dragging = true;
+        suppressClickRef.current = true;
+      }
+
+      const sf = monitor.scaleFactor;
+      const { x: mx, y: my } = monitor.position;
+      const { width: mw, height: mh } = monitor.size;
+      const zone = Math.round(EDGE_TRANSFER_ZONE * sf);
+
+      // Constrained to the current edge's axis; live-detect a perpendicular
+      // edge crossing to transfer the dock (and force the tab shape, since
+      // there's no vertical-bar variant for a side edge).
+      let nextEdge = dockRef.current.edge;
+      if (nextEdge === 'top' || nextEdge === 'bottom') {
+        if (cursor.x - mx < zone) nextEdge = 'left';
+        else if (mx + mw - cursor.x < zone) nextEdge = 'right';
+      } else {
+        if (cursor.y - my < zone) nextEdge = 'top';
+        else if (my + mh - cursor.y < zone) nextEdge = 'bottom';
+      }
+
+      let nextLevel = levelRef.current;
+      if (nextEdge !== dockRef.current.edge) {
+        if (nextEdge === 'left' || nextEdge === 'right') nextLevel = 2;
+        dockRef.current = { ...dockRef.current, edge: nextEdge };
+        setEdge(nextEdge);
+        if (nextLevel !== levelRef.current) {
+          levelRef.current = nextLevel;
+          setLevel(nextLevel);
+        }
+      }
+
+      const size = sizeForLevel(nextLevel, nextEdge);
+      const margin = Math.round(MARGIN * sf);
+      const w = Math.round(size.w * sf);
+      const h = Math.round(size.h * sf);
+      let x: number;
+      let y: number;
+      if (nextEdge === 'left' || nextEdge === 'right') {
+        x = nextEdge === 'left' ? mx + margin : mx + mw - w - margin;
+        y = clamp(cursor.y - h / 2, my + margin, my + mh - h - margin);
+      } else {
+        y = nextEdge === 'top' ? my + margin : my + mh - h - margin;
+        x = clamp(cursor.x - w / 2, mx + margin, mx + mw - w - margin);
+      }
+
+      const win = getCurrentWindow();
+      await win.setSize(new PhysicalSize(w, h));
+      await win.setPosition(new PhysicalPosition(Math.round(x), Math.round(y)));
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const onDown = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.minibar-tools')) return;
+      e.preventDefault();
+      dragging = false;
+      currentMonitor().then((m) => {
+        monitor = m;
+      });
+      cursorPosition().then((c) => {
+        startCursor = { x: c.x, y: c.y };
+        rafId = requestAnimationFrame(tick);
+      });
+      onUp = () => finishDrag();
+      window.addEventListener('mouseup', onUp, { once: true });
+    };
+
+    window.addEventListener('mousedown', onDown);
     return () => {
-      window.removeEventListener('mousedown', onMouseDown, true);
-      unlistenMoved?.();
-      if (settleTimer.current) window.clearTimeout(settleTimer.current);
-      if (armTimer.current) window.clearTimeout(armTimer.current);
+      window.removeEventListener('mousedown', onDown);
+      if (onUp) window.removeEventListener('mouseup', onUp);
+      stopLoop();
     };
   }, []);
 
@@ -237,7 +298,13 @@ export default function MiniBar() {
     await getCurrentWindow().setAlwaysOnTop(next);
   };
 
-  const expandToPanel = () => invoke('restore_main').catch(console.error);
+  const expandToPanel = () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    invoke('restore_main').catch(console.error);
+  };
 
   const collapseToTab = async () => {
     setLevel(2);
@@ -245,6 +312,10 @@ export default function MiniBar() {
   };
 
   const expandToBar = async () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
     setLevel(1);
     await applyPlacement(1, dockRef.current);
   };
@@ -263,7 +334,7 @@ export default function MiniBar() {
 
     if (horizontal) {
       return (
-        <div className="minitab minitab--horizontal" data-tauri-drag-region="deep">
+        <div className="minitab minitab--horizontal">
           <button
             className="minitab-body minitab-body--horizontal"
             onClick={expandToBar}
@@ -285,7 +356,7 @@ export default function MiniBar() {
     }
 
     return (
-      <div className="minitab" data-tauri-drag-region="deep">
+      <div className="minitab">
         <button className="minitab-body" onClick={expandToBar} title="Abrir" aria-label="Abrir">
           <NoteIcon size={14} />
           <span className="minitab-count">{pending.length}</span>
@@ -295,7 +366,7 @@ export default function MiniBar() {
   }
 
   return (
-    <div className="minibar" data-tauri-drag-region="deep">
+    <div className="minibar">
       {empty ? (
         <div className="minibar-status empty">
           <Check size={16} />
