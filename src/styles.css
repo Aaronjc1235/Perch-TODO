@@ -460,7 +460,12 @@ textarea.notes-input {
 .minibar-status.empty { background: var(--bg-elev); }
 .minibar-status.empty svg { color: var(--muted); }
 
-.minibar-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.minibar-text {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;
+  cursor: pointer; border-radius: 8px; padding: 2px 4px; margin: -2px -4px;
+  transition: background .12s;
+}
+.minibar-text:hover { background: var(--hover); }
 .minibar-text .line {
   font-size: 13.5px; font-weight: 600; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -552,4 +557,39 @@ textarea.notes-input {
 .minitab-count {
   font-size: 13px; font-weight: 700; color: var(--text);
   font-variant-numeric: tabular-nums;
+}
+
+/* Variante horizontal de .minitab — "tirita" angosta, solo cuando el
+   widget está acoplado al borde superior o inferior (no a un lado). */
+.minitab.minitab--horizontal {
+  flex-direction: row; align-items: center; gap: 6px;
+  width: auto; height: 34px; padding: 4px 10px 4px 4px;
+  border-radius: 17px;
+}
+
+.minitab-grip--horizontal {
+  width: 14px; height: 100%; flex: none; border-radius: 8px;
+}
+
+.minitab-body--horizontal {
+  flex-direction: row; width: auto; justify-content: flex-start;
+  gap: 7px; padding: 0 4px; border-radius: 13px;
+  font-size: 12px; color: var(--text); white-space: nowrap;
+}
+
+.minitab-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: none;
+  background: var(--accent);
+}
+.minitab-dot.empty { background: var(--muted); }
+
+.minitab-sep { color: var(--muted); }
+
+.minitab-time {
+  color: var(--text-dim); font-variant-numeric: tabular-nums;
+}
+
+.minitab-next-title {
+  max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text);
 }

@@ -19,10 +19,19 @@ interface Dock {
 }
 
 const BAR_SIZE = { w: 320, h: 54 };
-const TAB_SIZE = { w: 60, h: 60 };
+// Nivel 2 takes two shapes: a slim horizontal strip when docked top/bottom
+// (there's room to stay wide and thin), or a small square when docked to a
+// side (a horizontal strip would be awkward jammed against a vertical edge).
+const TAB_SIZE_HORIZONTAL = { w: 240, h: 34 };
+const TAB_SIZE_SQUARE = { w: 60, h: 60 };
 const MARGIN = 10; // logical px gap kept from the screen edge
 const DEFAULT_DOCK: Dock = { edge: 'right', offset: 0.85 };
 const DOCK_SETTING_KEY = 'mini_dock';
+
+function sizeForLevel(level: 1 | 2, edge: Edge): { w: number; h: number } {
+  if (level === 1) return BAR_SIZE;
+  return edge === 'top' || edge === 'bottom' ? TAB_SIZE_HORIZONTAL : TAB_SIZE_SQUARE;
+}
 
 function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
@@ -57,7 +66,7 @@ async function applyPlacement(level: 1 | 2, dock: Dock) {
   if (!monitor) return;
   const win = getCurrentWindow();
   const sf = monitor.scaleFactor;
-  const logical = level === 2 ? TAB_SIZE : BAR_SIZE;
+  const logical = sizeForLevel(level, dock.edge);
   const w = Math.round(logical.w * sf);
   const h = Math.round(logical.h * sf);
   const margin = Math.round(MARGIN * sf);
@@ -123,6 +132,7 @@ export default function MiniBar() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [pinned, setPinned] = useState(true);
   const [level, setLevel] = useState<1 | 2>(1);
+  const [edge, setEdge] = useState<Edge>(DEFAULT_DOCK.edge);
   const dockRef = useRef<Dock>(DEFAULT_DOCK);
   const moveTimer = useRef<number | null>(null);
 
@@ -145,6 +155,7 @@ export default function MiniBar() {
     (async () => {
       const dock = await loadDock();
       dockRef.current = dock;
+      setEdge(dock.edge);
       await applyPlacement(1, dock);
     })();
   }, []);
@@ -160,6 +171,7 @@ export default function MiniBar() {
           const dock = await computeDockFromDrag();
           if (!dock) return;
           dockRef.current = dock;
+          setEdge(dock.edge);
           await applyPlacement(level, dock);
           saveDock(dock);
         }, 160);
@@ -203,6 +215,39 @@ export default function MiniBar() {
   const empty = total === 0 || !next;
 
   if (level === 2) {
+    const horizontal = edge === 'top' || edge === 'bottom';
+
+    if (horizontal) {
+      return (
+        <div className="minitab minitab--horizontal">
+          <button
+            className="minitab-grip minitab-grip--horizontal"
+            onMouseDown={startDrag}
+            title="Mover"
+            aria-label="Mover"
+          >
+            <Grip size={10} />
+          </button>
+          <button
+            className="minitab-body minitab-body--horizontal"
+            onClick={expandToBar}
+            title="Abrir barra"
+            aria-label="Abrir barra"
+          >
+            <span className={`minitab-dot${empty ? ' empty' : ''}`} />
+            <span className="minitab-count">{pending.length}</span>
+            {!empty && (
+              <>
+                <span className="minitab-sep">|</span>
+                {next.start_time && <span className="minitab-time">{next.start_time}</span>}
+                <span className="minitab-next-title">{next.title}</span>
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="minitab">
         <button className="minitab-grip" onMouseDown={startDrag} title="Mover" aria-label="Mover">
@@ -232,7 +277,7 @@ export default function MiniBar() {
         </div>
       )}
 
-      <div className="minibar-text">
+      <div className="minibar-text" onClick={expandToPanel} title="Abrir panel">
         {empty ? (
           <>
             <span className="line">Sin tareas</span>
