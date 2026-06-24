@@ -1,14 +1,71 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+mod commands;
+mod db;
+mod scheduler;
+mod tray;
+mod windows;
+
+use tauri::{Manager, WindowEvent};
+use tauri_plugin_autostart::MacosLauncher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    // single-instance must be the FIRST plugin registered. Focus the existing
+    // window instead of spawning a duplicate process.
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        windows::show_main(app);
+    }));
+
+    builder
+        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_positioner::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec![]),
+        ))
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations(db::DB_URL, db::migrations())
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            commands::open_sticky_note,
+            commands::snooze_task,
+            commands::complete_task,
+            commands::dismiss_overlay,
+        ])
+        .on_window_event(|window, event| {
+            // The app never quits when a window is closed: hide it and keep
+            // living in the tray. Only "Salir" from the tray terminates.
+            // Overlay reminders are transient and may close for real.
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                let label = window.label();
+                if label == "main" || label.starts_with("sticky-") {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
+        .setup(|app| {
+            let handle = app.handle().clone();
+
+            // Dedicated sqlx pool for the Rust scheduler + Rust-side commands,
+            // pointing at the very same file tauri-plugin-sql uses.
+            let path = db::db_path(&handle)?;
+            let pool = tauri::async_runtime::block_on(db::make_pool(&path))?;
+            app.manage(db::Db(pool.clone()));
+
+            tray::setup_tray(&handle)?;
+
+            // Reminder loop in the background (survives all windows being hidden).
+            tauri::async_runtime::spawn(scheduler::run(handle.clone(), pool));
+
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,10 +1,33 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["main"],
+  "description": "Capabilities for all app windows (main, sticky-*, overlay-*)",
+  "windows": ["main", "sticky-*", "overlay-*", "quick-add"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-close",
+    "core:window:allow-set-focus",
+    "core:window:allow-set-skip-taskbar",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
+    "core:window:allow-center",
+    "core:webview:allow-create-webview-window",
+    "core:event:default",
+    "opener:default",
+    "sql:default",
+    "sql:allow-execute",
+    "sql:allow-select",
+    "sql:allow-load",
+    "notification:default",
+    "positioner:default",
+    "window-state:default",
+    "autostart:default",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
   ]
 }
