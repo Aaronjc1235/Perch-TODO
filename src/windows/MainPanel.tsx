@@ -5,9 +5,10 @@ import {
   isPermissionGranted,
   requestPermission,
 } from '@tauri-apps/plugin-notification';
-import { reminderFrom, todayStr } from '../db';
+import { addHours, nowTime, reminderFrom, todayStr } from '../db';
 import { useTasks } from '../store';
 import { COLORS, type Task } from '../types';
+import TimeField from '../components/TimeField';
 
 function prettyDate(d: string): string {
   const date = new Date(`${d}T00:00:00`);
@@ -21,10 +22,12 @@ function prettyDate(d: string): string {
 export default function MainPanel() {
   const { date, tasks, refresh, setDate, add, toggle, remove } = useTasks();
   const [title, setTitle] = useState('');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
+  // Default to the machine's current local time, end one hour later.
+  const [start, setStart] = useState(() => nowTime());
+  const [end, setEnd] = useState(() => addHours(nowTime(), 1));
   const [remind, setRemind] = useState(false);
   const [color, setColor] = useState(COLORS[0]);
+  const [error, setError] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
 
   // Initial load + ensure notification permission.
@@ -58,20 +61,25 @@ export default function MainPanel() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    setError(null);
     const remind_at = remind ? reminderFrom(date, start || '09:00') : null;
-    await add({
-      title: title.trim(),
-      scheduled_date: date,
-      start_time: start || null,
-      end_time: end || null,
-      remind_at,
-      color,
-    });
-    setTitle('');
-    setStart('');
-    setEnd('');
-    setRemind(false);
-    titleRef.current?.focus();
+    try {
+      await add({
+        title: title.trim(),
+        scheduled_date: date,
+        start_time: start || null,
+        end_time: end || null,
+        remind_at,
+        color,
+      });
+      setTitle('');
+      setStart(nowTime());
+      setEnd(addHours(nowTime(), 1));
+      setRemind(false);
+      titleRef.current?.focus();
+    } catch (err) {
+      setError(String(err));
+    }
   };
 
   const pending = tasks.filter((t) => !t.completed);
@@ -107,14 +115,14 @@ export default function MainPanel() {
           onChange={(e) => setTitle(e.target.value)}
         />
         <div className="add-row">
-          <label className="field">
+          <div className="field">
             <span>Inicio</span>
-            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-          </label>
-          <label className="field">
+            <TimeField value={start} onChange={setStart} ariaLabel="Inicio" />
+          </div>
+          <div className="field">
             <span>Fin</span>
-            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
-          </label>
+            <TimeField value={end} onChange={setEnd} ariaLabel="Fin" />
+          </div>
           <label className="field check">
             <input type="checkbox" checked={remind} onChange={(e) => setRemind(e.target.checked)} />
             <span>Recordar</span>
@@ -137,6 +145,7 @@ export default function MainPanel() {
             Agregar
           </button>
         </div>
+        {error && <div className="form-error">No se pudo agregar: {error}</div>}
       </form>
 
       <div className="task-list">

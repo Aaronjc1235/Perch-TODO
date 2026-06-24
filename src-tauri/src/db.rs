@@ -73,3 +73,44 @@ CREATE TABLE IF NOT EXISTS settings (
         kind: MigrationKind::Up,
     }]
 }
+
+#[cfg(test)]
+mod tests {
+    use sqlx::sqlite::SqlitePoolOptions;
+    use sqlx::{Row, SqlitePool};
+
+    const CREATE: &str = "CREATE TABLE tasks (\
+        id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', \
+        scheduled_date TEXT NOT NULL, start_time TEXT, end_time TEXT, remind_at TEXT, \
+        reminded INTEGER NOT NULL DEFAULT 0, completed INTEGER NOT NULL DEFAULT 0, \
+        color TEXT NOT NULL DEFAULT '#7aa2f7', position INTEGER NOT NULL DEFAULT 0, \
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL);";
+
+    async fn pool() -> SqlitePool {
+        let p = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(CREATE).execute(&p).await.unwrap();
+        p
+    }
+
+    // Regression: the createTask INSERT (9 columns, distinct placeholders) must
+    // round-trip including a NULL bind for remind_at.
+    #[tokio::test]
+    async fn create_task_insert_ok() {
+        let p = pool().await;
+        sqlx::query(
+            "INSERT INTO tasks (title, notes, scheduled_date, start_time, end_time, remind_at, color, created_at, updated_at) \
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+        )
+        .bind("t").bind("").bind("2026-06-24").bind("02:02").bind("13:02")
+        .bind(Option::<String>::None).bind("#7aa2f7").bind("2026-06-24T02:02:00").bind("2026-06-24T02:02:00")
+        .execute(&p)
+        .await
+        .unwrap();
+        let row = sqlx::query("SELECT COUNT(*) AS c FROM tasks").fetch_one(&p).await.unwrap();
+        let c: i64 = row.get("c");
+        assert_eq!(c, 1);
+    }
+}

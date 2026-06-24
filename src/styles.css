@@ -63,8 +63,12 @@ textarea {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-transform: capitalize;
   font-size: 15px;
+}
+
+/* Capitalize only the first letter of the localized date string. */
+.date-label strong::first-letter {
+  text-transform: uppercase;
 }
 
 .link {
@@ -409,4 +413,90 @@ textarea {
 .overlay-actions .ghost {
   background: var(--bg-soft);
   border: 1px solid #2f3550;
+}
+
+/* ---------------- Custom time field (AM/PM toggle) ---------------- */
+
+.timefield {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--bg-soft);
+  border: 1px solid var(--bg-elev);
+  border-radius: 8px;
+  padding: 4px 6px;
+}
+
+.timefield:focus-within {
+  border-color: var(--accent);
+}
+
+.tf-num {
+  width: 22px;
+  background: transparent;
+  border: none;
+  outline: none;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tf-colon {
+  color: var(--muted);
+}
+
+.tf-ampm {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 2px;
+  background: var(--bg-elev);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text);
+}
+
+.tf-ampm:hover {
+  background: var(--accent);
+  color: #0b0d1a;
+}
+
+.tf-arrow {
+  font-size: 11px;
+  opacity: 0.7;
+  line-height: 1;
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* ---------------- Automatic light theme (follows the OS) ---------------- */
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #e1e2e7; /* Tokyo Night Day */
+    --bg-soft: #d9dae1;
+    --bg-elev: #c4c8da;
+    --text: #343b58;
+    --muted: #8990b3;
+    --accent: #2e7de9;
+    --danger: #f52a65;
+  }
+
+  .checkbox {
+    color: var(--accent);
+  }
+
+  .overlay {
+    border-color: #b7bcd1;
+  }
+
+  .overlay-actions .ghost {
+    border-color: #b7bcd1;
+  }
 }

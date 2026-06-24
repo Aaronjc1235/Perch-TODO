@@ -28,6 +28,21 @@ export function nowDateTime(d = new Date()): string {
   return `${todayStr(d)}T${hh}:${mm}:${ss}`;
 }
 
+/** Current local wall-clock time as 'HH:MM' (24h, machine timezone). */
+export function nowTime(d = new Date()): string {
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+/** Add a number of hours to a 'HH:MM' value, wrapping within the same day. */
+export function addHours(time: string, hours: number): string {
+  const [h, m] = time.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return time;
+  const total = (((h + hours) % 24) + 24) % 24;
+  return `${String(total).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 /** Build a local reminder timestamp from a date + 'HH:MM'. */
 export function reminderFrom(date: string, time: string): string {
   return `${date}T${time}:00`;
@@ -58,7 +73,7 @@ export async function createTask(t: NewTask): Promise<number> {
   const res = await db.execute(
     `INSERT INTO tasks
        (title, notes, scheduled_date, start_time, end_time, remind_at, color, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       t.title,
       t.notes ?? '',
@@ -67,6 +82,7 @@ export async function createTask(t: NewTask): Promise<number> {
       t.end_time ?? null,
       t.remind_at ?? null,
       t.color ?? '#7aa2f7',
+      now,
       now,
     ],
   );
