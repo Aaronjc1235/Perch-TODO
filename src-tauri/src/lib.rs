@@ -63,6 +63,10 @@ pub fn run() {
 
             tray::setup_tray(&handle)?;
 
+            // Enable autostart on first launch (idempotent — safe to call every run).
+            use tauri_plugin_autostart::ManagerExt;
+            let _ = app.autolaunch().enable();
+
             // Reminder loop in the background (survives all windows being hidden).
             tauri::async_runtime::spawn(scheduler::run(handle.clone(), pool));
 
