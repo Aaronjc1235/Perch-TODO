@@ -77,13 +77,18 @@ pub fn run() {
             // Reminder loop in the background (survives all windows being hidden).
             tauri::async_runtime::spawn(scheduler::run(handle.clone(), pool));
 
-            // Launched by OS at startup → mini widget only, no panel flash.
-            // Launched manually → show the panel as normal.
-            if std::env::args().any(|a| a == "--minimized") {
-                let _ = windows::open_mini(&handle);
-            } else {
-                windows::show_main(&handle);
-            }
+            // Defer window show so it runs after window-state plugin has
+            // finished restoring any persisted size/position, ensuring our
+            // visibility decision is always the last word.
+            let h = handle.clone();
+            let minimized = std::env::args().any(|a| a == "--minimized");
+            tauri::async_runtime::spawn(async move {
+                if minimized {
+                    let _ = windows::open_mini(&h);
+                } else {
+                    windows::show_main(&h);
+                }
+            });
 
             Ok(())
         })
