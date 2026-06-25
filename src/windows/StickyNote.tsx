@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getTask, updateTask } from '../db';
 import { COLORS, type Task } from '../types';
 import { Pin, Close } from '../components/Icons';
+import { closeSelf, setAlwaysOnTopSelf } from '../win';
 
 export default function StickyNote({ id }: { id: number }) {
   const [task, setTask] = useState<Task | null>(null);
@@ -24,7 +24,7 @@ export default function StickyNote({ id }: { id: number }) {
   const togglePin = async () => {
     const next = !pinned;
     setPinned(next);
-    await getCurrentWindow().setAlwaysOnTop(next);
+    await setAlwaysOnTopSelf(next);
   };
 
   if (!task) {
@@ -56,7 +56,7 @@ export default function StickyNote({ id }: { id: number }) {
           <button className={`pin${pinned ? ' on' : ''}`} onClick={togglePin} title="Fijar encima">
             <Pin size={15} strokeWidth={1.9} />
           </button>
-          <button className="pin" onClick={() => getCurrentWindow().close()} title="Cerrar nota">
+          <button className="pin" onClick={() => closeSelf()} title="Cerrar nota">
             <Close size={15} />
           </button>
         </div>

@@ -47,9 +47,15 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
         .ok_or("missing default window icon")?
         .clone();
 
-    TrayIconBuilder::with_id("main-tray")
-        .icon(icon)
-        .icon_as_template(true)
+    let tray_builder = TrayIconBuilder::with_id("main-tray").icon(icon);
+
+    // icon_as_template is a macOS-only concept (monochrome template icons
+    // rendered by the system in the appropriate menu-bar color). On Windows
+    // and Linux this is a no-op, but being explicit avoids unexpected rendering.
+    #[cfg(target_os = "macos")]
+    let tray_builder = tray_builder.icon_as_template(true);
+
+    tray_builder
         .tooltip("Perch TODO")
         .menu(&menu)
         .show_menu_on_left_click(false)

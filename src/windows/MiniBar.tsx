@@ -12,6 +12,7 @@ import { listen } from '@tauri-apps/api/event';
 import { getSetting, listTasksByDate, setSetting, todayStr } from '../db';
 import type { Task } from '../types';
 import { Pin, Expand, Clock, Check, Minimize, NoteIcon } from '../components/Icons';
+import { setAlwaysOnTopSelf } from '../win';
 
 type Edge = 'top' | 'bottom' | 'left' | 'right';
 interface Dock {
@@ -182,8 +183,18 @@ export default function MiniBar() {
     let startCursor: { x: number; y: number } | null = null;
     let monitor: Monitor | null = null;
     let onUp: (() => void) | null = null;
+    // Authoritative "the loop should keep running" flag. cancelAnimationFrame
+    // alone is NOT enough to stop this loop: tick() is async, so a tick already
+    // mid-flight (suspended on an `await`) will resume after stopLoop() ran and
+    // re-arm itself via requestAnimationFrame — resurrecting the loop with no
+    // mouseup listener left to ever stop it again (the widget then follows the
+    // cursor forever, with no button held). tick() re-checks this flag after
+    // every await and before scheduling the next frame, so a release always
+    // wins the race.
+    let loopAlive = false;
 
     const stopLoop = () => {
+      loopAlive = false;
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
         rafId = null;
@@ -224,8 +235,9 @@ export default function MiniBar() {
     };
 
     const tick = async () => {
-      if (!startCursor || !monitor) return;
+      if (!loopAlive || !startCursor || !monitor) return;
       const cursor = await cursorPosition();
+      if (!loopAlive) return; // released while awaiting — do not re-arm
 
       if (!dragging) {
         const dx = cursor.x - startCursor.x;
@@ -289,7 +301,9 @@ export default function MiniBar() {
 
       const win = getCurrentWindow();
       await win.setSize(new PhysicalSize(w, h));
+      if (!loopAlive) return; // released while awaiting — do not re-arm
       await win.setPosition(new PhysicalPosition(Math.round(x), Math.round(y)));
+      if (!loopAlive) return; // released while awaiting — do not re-arm
 
       rafId = requestAnimationFrame(tick);
     };
@@ -315,6 +329,7 @@ export default function MiniBar() {
         if (cancelled) return;
         monitor = m;
         startCursor = { x: c.x, y: c.y };
+        loopAlive = true;
         rafId = requestAnimationFrame(tick);
       });
     };
@@ -330,7 +345,7 @@ export default function MiniBar() {
   const togglePin = async () => {
     const next = !pinned;
     setPinned(next);
-    await getCurrentWindow().setAlwaysOnTop(next);
+    await setAlwaysOnTopSelf(next);
   };
 
   const expandToPanel = () => {

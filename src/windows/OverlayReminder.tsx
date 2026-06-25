@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import { getTask } from '../db';
 import type { Task } from '../types';
 import { Bell, Close, Clock } from '../components/Icons';
+import { closeSelf } from '../win';
 
 export default function OverlayReminder({ id }: { id: number }) {
   const [task, setTask] = useState<Task | null>(null);
@@ -20,7 +20,7 @@ export default function OverlayReminder({ id }: { id: number }) {
   const done = () => invoke('complete_task', { id }).catch(console.error);
   const snooze = (minutes: number) =>
     invoke('snooze_task', { id, minutes }).catch(console.error);
-  const close = () => invoke('dismiss_overlay', { id }).catch(() => getCurrentWindow().close());
+  const close = () => invoke('dismiss_overlay', { id }).catch(() => closeSelf());
 
   return (
     <div className="overlay">

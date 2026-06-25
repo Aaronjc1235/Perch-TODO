@@ -46,6 +46,9 @@ pub fn run() {
             commands::snooze_task,
             commands::complete_task,
             commands::dismiss_overlay,
+            commands::hide_window,
+            commands::close_window,
+            commands::set_always_on_top,
         ])
         .on_window_event(|window, event| {
             // The app never quits when a window is closed: hide it and keep

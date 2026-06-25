@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import {
   isPermissionGranted,
   requestPermission,
 } from '@tauri-apps/plugin-notification';
 import { addHours, nowTime, reminderFrom, todayStr } from '../db';
+import { hideSelf, setAlwaysOnTopSelf } from '../win';
 import { useTasks } from '../store';
 import { COLORS, type Task } from '../types';
 import TimeField from '../components/TimeField';
@@ -71,7 +71,7 @@ export default function MainPanel() {
   const togglePin = async () => {
     const next = !pinned;
     setPinned(next);
-    await getCurrentWindow().setAlwaysOnTop(next);
+    await setAlwaysOnTopSelf(next);
   };
 
   const minimize = () => invoke('minimize_to_widget').catch(console.error);
@@ -129,7 +129,7 @@ export default function MainPanel() {
         <button
           className="ghost sm"
           title="Cerrar (sigue activo en segundo plano)"
-          onClick={() => getCurrentWindow().hide()}
+          onClick={() => hideSelf()}
           aria-label="Cerrar"
         >
           <Close size={15} strokeWidth={1.9} />

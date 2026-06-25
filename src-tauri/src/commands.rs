@@ -6,14 +6,20 @@ use crate::scheduler::now_string;
 use crate::windows;
 
 /// Open (or focus) a sticky-note window for a task.
+///
+/// MUST be `async`: on Windows, creating/manipulating a window inside a
+/// synchronous command deadlocks the main event loop (tauri issue #4121).
+/// Async commands run off the blocking path, so window creation is dispatched
+/// to the main thread correctly.
 #[tauri::command]
-pub fn open_sticky_note(app: AppHandle, id: i64) -> Result<(), String> {
+pub async fn open_sticky_note(app: AppHandle, id: i64) -> Result<(), String> {
     windows::open_sticky(&app, id)
 }
 
 /// Collapse the app into the bottom-right floating widget (hides the panel).
+/// `async` for the same Windows window-creation reason as above.
 #[tauri::command]
-pub fn minimize_to_widget(app: AppHandle) -> Result<(), String> {
+pub async fn minimize_to_widget(app: AppHandle) -> Result<(), String> {
     windows::open_mini(&app)?;
     if let Some(main) = app.get_webview_window("main") {
         let _ = main.hide();
@@ -22,8 +28,9 @@ pub fn minimize_to_widget(app: AppHandle) -> Result<(), String> {
 }
 
 /// Restore the full day panel from the widget.
+/// `async` for the same Windows window-creation reason as above.
 #[tauri::command]
-pub fn restore_main(app: AppHandle) {
+pub async fn restore_main(app: AppHandle) {
     windows::show_main(&app);
 }
 
@@ -67,9 +74,44 @@ pub async fn complete_task(app: AppHandle, db: State<'_, Db>, id: i64) -> Result
 }
 
 /// Just close the overlay without changing the task.
+/// `async` for the same Windows window-operation reason as above.
 #[tauri::command]
-pub fn dismiss_overlay(app: AppHandle, id: i64) {
+pub async fn dismiss_overlay(app: AppHandle, id: i64) {
     close_overlay(&app, id);
+}
+
+// --- async window-operation wrappers ---------------------------------------
+// On Windows, window operations (hide/close/set_always_on_top) invoked directly
+// from the frontend via the JS window API can deadlock the main event loop
+// (tauri issue #4121 / #3990). Routing them through `async` commands runs them
+// off the blocking path so the op is dispatched to the main thread correctly.
+// The frontend calls these instead of getCurrentWindow().hide()/.close()/etc.
+
+/// Hide the window with the given label.
+#[tauri::command]
+pub async fn hide_window(app: AppHandle, label: String) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(&label) {
+        win.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Close the window with the given label.
+#[tauri::command]
+pub async fn close_window(app: AppHandle, label: String) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(&label) {
+        win.close().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Set always-on-top for the window with the given label.
+#[tauri::command]
+pub async fn set_always_on_top(app: AppHandle, label: String, value: bool) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(&label) {
+        win.set_always_on_top(value).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 fn close_overlay(app: &AppHandle, id: i64) {
