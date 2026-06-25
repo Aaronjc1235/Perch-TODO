@@ -28,6 +28,33 @@ Gratis · sin cuenta · ~6 MB · se instala en segundos.
 
 ---
 
+## Instalación
+
+Perch TODO no tiene firma de código de pago. El sistema operativo lo advierte la primera vez — es normal en apps indie gratuitas. Así se salta:
+
+### Windows
+
+SmartScreen muestra "Windows protegió su PC":
+
+1. Haz clic en **Más información**
+2. Haz clic en **Ejecutar de todas formas**
+3. Sigue el instalador normalmente
+
+### macOS
+
+Gatekeeper muestra "'Perch TODO' está dañado y no puede abrirse":
+
+1. **No** muevas la app al basurero
+2. Abre **Terminal** y ejecuta:
+   ```bash
+   xattr -cr "/Applications/Perch TODO.app"
+   ```
+3. Abre la app normalmente
+
+> Esto solo es necesario la primera vez. Perch TODO no tiene acceso a internet, no recopila datos y no requiere cuenta.
+
+---
+
 ## Todo lo que necesitas, nada que estorbe
 
 ![Features](promo-png/02-scene.png)
