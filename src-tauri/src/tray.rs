@@ -38,6 +38,10 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
+    #[cfg(target_os = "macos")]
+    let icon = tauri::include_image!("icons/tray-icon-mac.png");
+
+    #[cfg(not(target_os = "macos"))]
     let icon = app
         .default_window_icon()
         .ok_or("missing default window icon")?
