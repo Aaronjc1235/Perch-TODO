@@ -10,11 +10,11 @@ import { addHours, nowTime, reminderFrom, todayStr } from '../db';
 import { useTasks } from '../store';
 import { COLORS, type Task } from '../types';
 import TimeField from '../components/TimeField';
+import appIcon from '../assets/app-icon.png';
 import {
   ChevronLeft,
   ChevronRight,
   Check,
-  NoteIcon,
   Close,
   Bell,
   Clock,
@@ -112,7 +112,7 @@ export default function MainPanel() {
   return (
     <div className="panel">
       <div className="panel-titlebar" data-tauri-drag-region>
-        <NoteIcon size={15} />
+        <img src={appIcon} width={18} height={18} style={{ borderRadius: 4, display: 'block' }} alt="" />
         <span className="brand">Perch TODO</span>
         <button
           className={`pin${pinned ? ' on' : ''}`}
