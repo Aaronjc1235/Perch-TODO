@@ -6,6 +6,7 @@ mod windows;
 
 use tauri::{Manager, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_window_state::StateFlags;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -19,7 +20,13 @@ pub fn run() {
     }));
 
     builder
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(
+            // Save size + position but NOT visibility — startup logic in
+            // setup() is the single authority on which windows are shown.
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::all() & !StateFlags::VISIBLE)
+                .build(),
+        )
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
