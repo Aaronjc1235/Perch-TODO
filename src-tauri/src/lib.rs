@@ -24,7 +24,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
-            Some(vec![]),
+            Some(vec!["--minimized"]),
         ))
         .plugin(
             tauri_plugin_sql::Builder::default()
@@ -65,6 +65,15 @@ pub fn run() {
 
             // Reminder loop in the background (survives all windows being hidden).
             tauri::async_runtime::spawn(scheduler::run(handle.clone(), pool));
+
+            // If launched by the OS at startup, skip the panel and go straight
+            // to the mini widget — the user didn't ask to open the app.
+            if std::env::args().any(|a| a == "--minimized") {
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.hide();
+                }
+                let _ = windows::open_mini(&handle);
+            }
 
             Ok(())
         })
