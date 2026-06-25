@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
+  NoteIcon,
   Close,
   Bell,
   Clock,
