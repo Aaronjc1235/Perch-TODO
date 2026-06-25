@@ -28,54 +28,48 @@ Gratis · sin cuenta · ~6 MB · se instala en segundos.
 
 ---
 
-## Funciones
+## Todo lo que necesitas, nada que estorbe
 
-### Notas adhesivas reales
+![Features](promo-png/02-scene.png)
 
-![Sticky notes](promo-png/02-scene.png)
+**Notas adhesivas reales** — Convierte cualquier tarea en una nota flotante de color y fíjala encima de todo lo demás.
 
-Convierte cualquier tarea en una nota flotante de color y fíjala encima de todo lo demás. Perfecta para lo que no puedes olvidar en el momento.
+**Recordatorios imposibles de ignorar** — Un aviso encima de todo a la hora justa. Pospón o márcalo hecho sin abrir el panel.
 
----
-
-### Recordatorios que no se pierden
-
-![Reminders](promo-png/03-scene.png)
-
-Pon hora, activa el aviso y elige un color. Perch te avisa encima de todo con un banner persistente: pospón o márcalo hecho sin abrir el panel.
+**Minimiza a tu gusto** — Barra, pestaña o una tirita que apenas asoma. Tú decides cuánto espacio ocupa.
 
 ---
 
-### Tan presente o discreta como la necesites
+## Claro u oscuro, según tu sistema
 
-![Minimize levels](promo-png/04-scene.png)
+![Dark and light theme](promo-png/03-scene.png)
 
-Tres niveles de minimizado: **Barra** muestra tu próxima tarea + botón de fijar, **Pestaña** solo el contador y **Tirita** apenas asoma. Con un toque la fijas encima de todo para no perderla de vista.
-
----
-
-### Modo oscuro y claro
-
-![Dark and light theme](promo-png/05-scene.png)
-
-Sigue automáticamente el tema del sistema. Cambia en tiempo real sin reiniciar.
+Se adapta al tema del sistema automáticamente. Cambia en tiempo real sin reiniciar.
 
 ---
 
-## Cómo se usa
+## Apenas estorba
 
-![How it works](promo-png/06-scene.png)
+![Mini tab](promo-png/04-scene.png)
+
+En reposo solo asoma una pestaña con el total de tareas. Un clic la despliega en barra, otro en expandir vuelve al panel completo.
+
+---
+
+## Así se usa en tu día a día
+
+![How it works](promo-png/05-scene.png)
 
 1. **Agrega con recordatorio** — Pon hora, activa el aviso y elige un color.
 2. **Te avisa a tiempo** — Un aviso encima de todo. Pospón o márcalo hecho.
-3. **Fíjala como nota** — Conviértela en nota adhesiva y fíjala encima de todo.
+3. **Fíjala como nota** — Conviértela en nota adhesiva encima de todo.
 4. **Déjala en segundo plano** — Minimízala a pestaña: discreta, pero siempre a un clic.
 
 ---
 
 ## Siempre en su sitio
 
-![Dock to edge](promo-png/07-scene.png)
+![Dock to edge](promo-png/06-scene.png)
 
 Se acopla sola arriba, abajo o a los lados — vertical en los costados, horizontal arriba y abajo. Nunca queda flotando a la deriva.
 
