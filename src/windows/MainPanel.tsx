@@ -136,7 +136,7 @@ export default function MainPanel() {
         </button>
       </div>
 
-      <div className="panel-head" data-tauri-drag-region>
+      <div className="panel-head">
         <div className="date-nav">
           <button className="ghost" onClick={() => shiftDay(-1)} aria-label="Día anterior">
             <ChevronLeft size={18} />

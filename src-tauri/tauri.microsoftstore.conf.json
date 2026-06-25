@@ -9,7 +9,7 @@
         "silent": true
       },
       "nsis": {
-        "installMode": "perMachine",
+        "installMode": "currentUser",
         "languages": ["English", "Spanish"],
         "displayLanguageSelector": false
       }
