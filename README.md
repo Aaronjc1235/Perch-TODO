@@ -5,8 +5,8 @@
   <p>Tareas, recordatorios y notas adhesivas en una app ligera que vive en tu bandeja del sistema.<br>Siempre a la vista, nunca en el camino.</p>
 
   [![Release](https://img.shields.io/github/v/release/Aaronjc1235/Perch-TODO?style=flat-square&color=7aa2f7&label=versión)](https://github.com/Aaronjc1235/Perch-TODO/releases/latest)
-  [![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](https://github.com/Aaronjc1235/Perch-TODO/releases/download/v0.1.2/Perch.TODO_0.1.0_x64-setup.exe)
-  [![macOS](https://img.shields.io/badge/macOS-12%2B-000000?style=flat-square&logo=apple&logoColor=white)](https://github.com/Aaronjc1235/Perch-TODO/releases/download/v0.1.2/Perch.TODO_0.1.0_aarch64.dmg)
+  [![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](https://github.com/Aaronjc1235/Perch-TODO/releases/download/v0.1.4/Perch.TODO_0.1.0_x64-setup.exe)
+  [![macOS](https://img.shields.io/badge/macOS-12%2B-000000?style=flat-square&logo=apple&logoColor=white)](https://github.com/Aaronjc1235/Perch-TODO/releases/download/v0.1.4/Perch.TODO_0.1.0_aarch64.dmg)
   [![Gratis](https://img.shields.io/badge/gratis-sin_cuenta-9ece6a?style=flat-square)](https://github.com/Aaronjc1235/Perch-TODO/releases/latest)
 
 </div>
@@ -21,8 +21,8 @@
 
 | Plataforma | Instalador |
 |---|---|
-| **Windows 10 / 11** | [Descargar `.exe`](https://github.com/Aaronjc1235/Perch-TODO/releases/download/v0.1.2/Perch.TODO_0.1.0_x64-setup.exe) |
-| **macOS 12+ (Apple Silicon)** | [Descargar `.dmg`](https://github.com/Aaronjc1235/Perch-TODO/releases/download/v0.1.2/Perch.TODO_0.1.0_aarch64.dmg) |
+| **Windows 10 / 11** | [Descargar `.exe`](https://github.com/Aaronjc1235/Perch-TODO/releases/download/v0.1.4/Perch.TODO_0.1.0_x64-setup.exe) |
+| **macOS 12+ (Apple Silicon)** | [Descargar `.dmg`](https://github.com/Aaronjc1235/Perch-TODO/releases/download/v0.1.4/Perch.TODO_0.1.0_aarch64.dmg) |
 
 Gratis · sin cuenta · ~6 MB · se instala en segundos.
 
