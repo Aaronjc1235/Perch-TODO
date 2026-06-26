@@ -175,6 +175,8 @@ export default function MainPanel() {
             <span>Fin</span>
             <TimeField value={end} onChange={setEnd} ariaLabel="Fin" />
           </label>
+        </div>
+        <div className="add-row add-row--sub">
           <label className="field check">
             <input type="checkbox" checked={remind} onChange={(e) => setRemind(e.target.checked)} />
             <span className="box">
@@ -334,12 +336,13 @@ function TaskRow({
             <span>Inicio</span>
             <TimeField value={editStart} onChange={setEditStart} ariaLabel="Inicio" />
           </label>
-          <span className="task-edit-sep">—</span>
           <label className="field">
             <span>Fin</span>
             <TimeField value={editEnd} onChange={setEditEnd} ariaLabel="Fin" />
           </label>
-          <label className="field check" style={{ marginLeft: 'auto' }}>
+        </div>
+        <div className="task-edit-row">
+          <label className="field check">
             <input type="checkbox" checked={editRemind} onChange={(e) => setEditRemind(e.target.checked)} />
             <span className="box"><Check size={12} strokeWidth={3} /></span>
             <span>Recordar</span>

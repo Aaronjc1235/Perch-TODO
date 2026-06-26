@@ -153,6 +153,7 @@ svg { display: block; }
 
 .add-row { display: flex; align-items: flex-end; gap: 10px; margin-top: 12px; }
 .add-row + .add-row { margin-top: 14px; align-items: center; justify-content: space-between; }
+.add-row--sub { margin-top: 8px !important; justify-content: flex-start !important; }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field > span {
