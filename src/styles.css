@@ -62,7 +62,7 @@
 /* ---------------------------------------------------------------- base */
 * { box-sizing: border-box; }
 
-html { background: transparent; } /* WebView2 en Windows necesita esto explícito */
+html { background: transparent; overflow: hidden; height: 100%; } /* WebView2 en Windows necesita esto explícito */
 
 body {
   margin: 0;
@@ -70,6 +70,8 @@ body {
   color: var(--text);
   background: transparent;        /* ventanas frameless transparentes */
   -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  height: 100%;
 }
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
@@ -89,6 +91,7 @@ svg { display: block; }
    ===================================================================== */
 .panel {
   width: 400px;
+  height: 100vh;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -204,7 +207,7 @@ svg { display: block; }
 /* =====================================================================
    LISTA Y FILA DE TAREA  (Variación A — timeline)
    ===================================================================== */
-.task-list { padding: 10px 10px 18px; }
+.task-list { flex: 1; overflow-y: auto; min-height: 0; padding: 10px 10px 18px; }
 .task-list .empty {
   margin: 32px 0; text-align: center; font-size: 13px; color: var(--muted);
 }
@@ -261,7 +264,7 @@ svg { display: block; }
 .task.completed .checkbox svg { opacity: 1; animation: tick-pop .18s ease; }
 
 /* ----- Variación B (soft cards): añade .task-list--cards al contenedor ----- */
-.task-list--cards { display: flex; flex-direction: column; gap: 9px; padding: 14px 14px 18px; }
+.task-list--cards { flex: 1; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 9px; padding: 14px 14px 18px; }
 .task-list--cards .task {
   background: var(--bg-soft); border: 1px solid var(--border);
   border-radius: 12px; padding: 13px;
@@ -285,7 +288,7 @@ svg { display: block; }
    ===================================================================== */
 .timefield {
   display: flex; align-items: center; gap: 3px;
-  height: 34px; padding: 0 4px 0 8px;
+  padding: 0 4px 0 8px;
   background: var(--bg-soft); border: 1px solid var(--border);
   border-radius: var(--radius-sm); transition: border-color .12s, background .12s, box-shadow .12s;
 }
@@ -294,31 +297,46 @@ svg { display: block; }
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
+
+/* Column wrapper for spinner arrow + input + arrow */
+.tf-col { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.tf-spin-btn {
+  width: 22px; height: 13px; padding: 0; font-size: 8px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); border-radius: 3px; transition: background .1s, color .1s;
+}
+.tf-spin-btn:hover { background: var(--bg-elev); color: var(--text); }
+
 .tf-num {
   width: 22px; padding: 0; text-align: center; background: none; border: none;
   color: var(--text); font-size: 13px; font-variant-numeric: tabular-nums;
-  border-radius: 5px;
+  border-radius: 5px; height: 22px;
 }
 .tf-num:focus { background: var(--bg-elev); }
-.tf-colon { color: var(--muted); font-size: 13px; }
+.tf-colon { color: var(--muted); font-size: 13px; align-self: center; }
 .tf-ampm {
-  display: flex; align-items: center; gap: 3px; height: 26px;
-  padding: 0 6px; margin-left: 2px; background: var(--bg-elev); border-radius: 7px;
-  transition: background .12s;
+  display: flex; align-items: center; height: 26px;
+  padding: 0 7px; margin-left: 2px; background: var(--bg-elev); border-radius: 7px;
+  transition: background .12s; align-self: center;
 }
 .tf-ampm:hover { background: var(--border-strong); }
 .tf-ampm-label { font-size: 11px; font-weight: 600; color: var(--text-dim); }
-.tf-arrow { width: 11px; height: 11px; fill: none; stroke: var(--muted); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 /* estado AM (toggled) — añade .is-am al .tf-ampm */
 .tf-ampm.is-am { background: var(--accent-soft); }
 .tf-ampm.is-am .tf-ampm-label { color: var(--accent); }
-.tf-ampm.is-am .tf-arrow { stroke: var(--accent); }
+/* 12h/24h mode toggle */
+.tf-mode {
+  font-size: 9px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--muted); padding: 3px 6px; border-radius: 6px; margin-left: 2px;
+  background: var(--bg-elev); transition: background .1s, color .1s; align-self: center;
+}
+.tf-mode:hover { background: var(--border-strong); color: var(--text); }
 
 /* =====================================================================
    NOTA ADHESIVA  (.sticky) — ventana frameless, color de la nota
    ===================================================================== */
 .sticky {
-  width: 260px; height: 260px;
+  width: 100%; height: 100vh;
   background: var(--note, #e0af68);          /* color de la nota inline */
   border-radius: 16px; color: var(--note-ink);
   box-shadow: 0 22px 50px -14px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.25);
@@ -343,9 +361,9 @@ svg { display: block; }
 }
 .sticky-title::placeholder { color: rgba(17,19,31,.45); }
 .sticky-body {
-  flex: 1; margin: 8px 14px 14px; padding: 0; background: none; border: none;
+  flex: 1; min-height: 0; margin: 8px 14px 14px; padding: 0; background: none; border: none;
   color: color-mix(in srgb, var(--note-ink) 88%, transparent);
-  font-size: 13.5px; line-height: 1.55; resize: none;
+  font-size: 13.5px; line-height: 1.55; resize: none; overflow-y: auto;
 }
 .sticky-body::placeholder { color: rgba(17,19,31,.4); }
 
@@ -597,3 +615,37 @@ textarea.notes-input {
 .minitab-pin--square { width: 100%; height: 14px; }
 
 .minitab--horizontal .minitab-pin { width: 24px; height: 24px; margin-left: 2px; }
+
+/* =====================================================================
+   EDICIÓN INLINE DE TAREA
+   ===================================================================== */
+.task--editing {
+  flex-direction: column; align-items: stretch; gap: 10px;
+  padding: 14px 13px; background: var(--bg-soft);
+  border: 1px solid var(--accent-soft); border-radius: 12px;
+}
+.task-list--cards .task--editing { background: var(--bg-elev); }
+
+.task-edit-title {
+  width: 100%; padding: 8px 12px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-md); color: var(--text); font-size: 14px;
+  transition: border-color .12s, box-shadow .12s;
+}
+.task-edit-title:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.task-edit-title::placeholder { color: var(--muted); }
+
+.task-edit-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.task-edit-sep { color: var(--muted); font-size: 12px; }
+
+.task-edit-actions {
+  display: flex; gap: 8px; justify-content: flex-end; margin-top: 2px;
+}
+.task-edit-actions .primary { height: 34px; padding: 0 14px; font-size: 13px; }
+.task-edit-actions .ghost { height: 34px; width: 34px; border-radius: 8px;
+  background: var(--bg-elev); color: var(--text-dim); }

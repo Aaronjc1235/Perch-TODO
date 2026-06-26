@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import {
   getCurrentWindow,
   currentMonitor,
+  monitorFromPoint,
   cursorPosition,
   PhysicalPosition,
   PhysicalSize,
@@ -91,8 +92,8 @@ async function applyPlacement(level: 1 | 2, dock: Dock, density: Density = 'slim
   const w = Math.round(logical.w * sf);
   const h = Math.round(logical.h * sf);
   const margin = Math.round(MARGIN * sf);
-  const { x: mx, y: my } = monitor.position;
-  const { width: mw, height: mh } = monitor.size;
+  const { x: mx, y: my } = monitor.workArea.position;
+  const { width: mw, height: mh } = monitor.workArea.size;
 
   let x: number;
   let y: number;
@@ -218,8 +219,8 @@ export default function MiniBar() {
       const pos = await win.outerPosition();
       const size = await win.outerSize();
       const margin = Math.round(MARGIN * monitor.scaleFactor);
-      const { x: mx, y: my } = monitor.position;
-      const { width: mw, height: mh } = monitor.size;
+      const { x: mx, y: my } = monitor.workArea.position;
+      const { width: mw, height: mh } = monitor.workArea.size;
       const finalEdge = dockRef.current.edge;
       let offset: number;
       if (finalEdge === 'left' || finalEdge === 'right') {
@@ -250,9 +251,14 @@ export default function MiniBar() {
         suppressClickRef.current = true;
       }
 
+      // Update monitor reference when cursor crosses to a different screen.
+      const newMonitor = await monitorFromPoint(cursor.x, cursor.y);
+      if (!loopAlive) return;
+      if (newMonitor) monitor = newMonitor;
+
       const sf = monitor.scaleFactor;
-      const { x: mx, y: my } = monitor.position;
-      const { width: mw, height: mh } = monitor.size;
+      const { x: mx, y: my } = monitor.workArea.position;
+      const { width: mw, height: mh } = monitor.workArea.size;
       const zone = Math.round(EDGE_TRANSFER_ZONE * sf);
 
       // Constrained to the current edge's axis; live-detect a perpendicular

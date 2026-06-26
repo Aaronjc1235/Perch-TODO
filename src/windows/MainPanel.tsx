@@ -22,6 +22,7 @@ import {
   Plus,
   Minimize,
   Pin,
+  Pencil,
 } from '../components/Icons';
 
 function prettyDate(d: string): string {
@@ -34,7 +35,7 @@ function prettyDate(d: string): string {
 }
 
 export default function MainPanel() {
-  const { date, tasks, refresh, setDate, add, toggle, remove, clearCompleted } = useTasks();
+  const { date, tasks, refresh, setDate, add, toggle, remove, clearCompleted, edit } = useTasks();
   const [title, setTitle] = useState('');
   // Default to the machine's current local time, end one hour later.
   const [start, setStart] = useState(() => nowTime());
@@ -44,6 +45,7 @@ export default function MainPanel() {
   const [error, setError] = useState<string | null>(null);
   const [pinned, setPinned] = useState(false);
   const [showDone, setShowDone] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
 
   // Initial load + ensure notification permission.
@@ -209,7 +211,17 @@ export default function MainPanel() {
           <p className="empty">Sin tareas para este día.</p>
         )}
         {pending.map((t) => (
-          <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />
+          <TaskRow
+            key={t.id}
+            task={t}
+            onToggle={toggle}
+            onRemove={remove}
+            isEditing={editingId === t.id}
+            onEdit={() => setEditingId(t.id)}
+            onSave={(fields) => { edit(t.id, fields).catch(console.error); setEditingId(null); }}
+            onCancel={() => setEditingId(null)}
+            date={date}
+          />
         ))}
         {done.length > 0 && (
           <>
@@ -232,7 +244,17 @@ export default function MainPanel() {
               )}
             </button>
             {showDone && done.map((t) => (
-              <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />
+              <TaskRow
+                key={t.id}
+                task={t}
+                onToggle={toggle}
+                onRemove={remove}
+                isEditing={editingId === t.id}
+                onEdit={() => setEditingId(t.id)}
+                onSave={(fields) => { edit(t.id, fields).catch(console.error); setEditingId(null); }}
+                onCancel={() => setEditingId(null)}
+                date={date}
+              />
             ))}
           </>
         )}
@@ -245,16 +267,109 @@ function TaskRow({
   task,
   onToggle,
   onRemove,
+  isEditing,
+  onEdit,
+  onSave,
+  onCancel,
+  date,
 }: {
   task: Task;
   onToggle: (id: number, completed: boolean) => void;
   onRemove: (id: number) => void;
+  isEditing: boolean;
+  onEdit: () => void;
+  onSave: (fields: Record<string, unknown>) => void;
+  onCancel: () => void;
+  date: string;
 }) {
   const done = !!task.completed;
+  const [editTitle, setEditTitle] = useState(task.title);
+  const [editStart, setEditStart] = useState(task.start_time ?? '');
+  const [editEnd, setEditEnd] = useState(task.end_time ?? '');
+  const [editColor, setEditColor] = useState(task.color);
+  const [editRemind, setEditRemind] = useState(!!task.remind_at);
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      setEditTitle(task.title);
+      setEditStart(task.start_time ?? '');
+      setEditEnd(task.end_time ?? '');
+      setEditColor(task.color);
+      setEditRemind(!!task.remind_at);
+      setTimeout(() => editInputRef.current?.focus(), 0);
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    if (!editTitle.trim()) return;
+    const remind_at = editRemind && editStart ? reminderFrom(date, editStart) : null;
+    onSave({
+      title: editTitle.trim(),
+      start_time: editStart || null,
+      end_time: editEnd || null,
+      color: editColor,
+      remind_at,
+    });
+  };
+
   const openSticky = () => invoke('open_sticky_note', { id: task.id }).catch(console.error);
   const time = task.start_time
     ? `${task.start_time}${task.end_time ? ' – ' + task.end_time : ''}`
     : '';
+
+  if (isEditing) {
+    return (
+      <div className="task task--editing">
+        <input
+          ref={editInputRef}
+          className="task-edit-title"
+          value={editTitle}
+          placeholder="Título de la tarea"
+          onChange={(e) => setEditTitle(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onCancel(); }}
+        />
+        <div className="task-edit-row">
+          <label className="field">
+            <span>Inicio</span>
+            <TimeField value={editStart} onChange={setEditStart} ariaLabel="Inicio" />
+          </label>
+          <span className="task-edit-sep">—</span>
+          <label className="field">
+            <span>Fin</span>
+            <TimeField value={editEnd} onChange={setEditEnd} ariaLabel="Fin" />
+          </label>
+          <label className="field check" style={{ marginLeft: 'auto' }}>
+            <input type="checkbox" checked={editRemind} onChange={(e) => setEditRemind(e.target.checked)} />
+            <span className="box"><Check size={12} strokeWidth={3} /></span>
+            <span>Recordar</span>
+          </label>
+        </div>
+        <div className="task-edit-row">
+          <div className="swatches">
+            {COLORS.map((c) => (
+              <button
+                type="button"
+                key={c}
+                className={`swatch${c === editColor ? ' active' : ''}`}
+                style={{ background: c, color: c }}
+                onClick={() => setEditColor(c)}
+                aria-label={`color ${c}`}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="task-edit-actions">
+          <button type="button" className="ghost" onClick={onCancel} title="Cancelar">
+            <Close size={15} strokeWidth={1.9} />
+          </button>
+          <button type="button" className="primary" onClick={handleSave}>
+            Guardar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`task${done ? ' completed' : ''}`}>
@@ -287,16 +402,21 @@ function TaskRow({
           </div>
         )}
       </div>
-      {!done && (
-        <div className="task-actions">
-          <button className="ghost sm" onClick={openSticky} title="Abrir como nota">
-            <NoteIcon size={16} strokeWidth={1.8} />
-          </button>
-          <button className="ghost sm danger" onClick={() => onRemove(task.id)} title="Borrar">
-            <Close size={15} strokeWidth={1.9} />
-          </button>
-        </div>
-      )}
+      <div className="task-actions">
+        {!done && (
+          <>
+            <button className="ghost sm" onClick={onEdit} title="Editar tarea">
+              <Pencil size={14} strokeWidth={1.8} />
+            </button>
+            <button className="ghost sm" onClick={openSticky} title="Abrir como nota">
+              <NoteIcon size={16} strokeWidth={1.8} />
+            </button>
+          </>
+        )}
+        <button className="ghost sm danger" onClick={() => onRemove(task.id)} title="Borrar">
+          <Close size={15} strokeWidth={1.9} />
+        </button>
+      </div>
     </div>
   );
 }
