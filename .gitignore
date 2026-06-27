@@ -26,7 +26,7 @@ dist-ssr
 # Local-only assets and tooling
 .github/workflows
 index.html
-promo-png/
+promo-png/*.heic
 vercel-deploy-plain/
 vercel-deploy/
 DESIGN_CONTEXT.md
